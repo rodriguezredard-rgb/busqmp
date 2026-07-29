@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from app.services.opportunity_service import list_opportunities, save_opportunity
+from app.services.opportunity_service import list_opportunities
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 
@@ -14,7 +14,3 @@ def get_opportunities(
     return list_opportunities(keyword, opportunity_type, region, organization, status, minimum_amount, maximum_amount, limit, offset)
 
 
-@router.post("")
-def create_opportunity(payload: dict):
-    save_opportunity(payload)
-    return {"status": "created"}

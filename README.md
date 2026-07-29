@@ -29,8 +29,9 @@ correo programado.
 - Con `DATABASE_URL`, oportunidades y perfiles se guardan en PostgreSQL. En
   producción se recomienda usar la cadena de conexión de Supabase o Neon.
 - La aplicación no guarda datos en Vercel; Vercel aloja solamente el frontend.
-- Si comparte la base con Peken, crea únicamente `busqmp_opportunities` y
-  `busqmp_search_profiles`; no modifica las tablas propias de Peken.
+- Si comparte la base con Peken, reutiliza `licitaciones`, crea `compras_agiles`
+  para la API Compra Ágil V2 y guarda la configuración en
+  `busqmp_search_profiles`. No modifica `adjudicaciones` ni usuarios de Peken.
 
 ## Fuente Mercado Público
 
@@ -38,6 +39,10 @@ La integración se encuentra en `backend/app/services/market_sources.py` y usa e
 endpoint oficial `servicios/v1/publico/licitaciones.json`. El ticket se entrega al
 backend mediante `MERCADO_PUBLICO_TICKET`; nunca debe agregarse al frontend ni al
 repositorio.
+
+Las Compras Ágiles se sincronizan incrementalmente desde
+`https://api2.mercadopublico.cl/v2/compra-agil`, usando el mismo ticket en el
+header HTTP y se almacenan en `compras_agiles`.
 
 El archivo `render.yaml` prepara el backend para Render y `vercel.json` construye
 automáticamente la aplicación ubicada en `frontend` desde el repositorio raíz.

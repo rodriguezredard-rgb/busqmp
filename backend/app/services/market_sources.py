@@ -62,5 +62,24 @@ class MarketSourcesService:
             })
         return results
 
-    def fetch_compra_agil(self, keyword: str = "", filters: dict | None = None) -> list[dict]:
-        return []
+    def fetch_compra_agil(self, keyword: str = "", filters: dict | None = None,
+                          minutes: int | None = None, page_size: int | None = None) -> list[dict]:
+        if not self.ticket:
+            return []
+        filters = filters or {}
+        minutes = int(minutes or filters.get("minutes") or 60)
+        page_size = min(int(page_size or filters.get("page_size") or 50), 50)
+        url = "https://api2.mercadopublico.cl/v2/compra-agil"
+        page, results = 1, []
+        while True:
+            response = requests.get(url, headers={"ticket": self.ticket}, params={
+                "ttl_cambio_ms": minutes * 60_000, "tamano_pagina": page_size,
+                "numero_pagina": page, "ordenar_por": "FechaUltimaModificacion",
+            }, timeout=40)
+            response.raise_for_status()
+            payload = (response.json() or {}).get("payload") or {}
+            results.extend(payload.get("items") or [])
+            pagination = payload.get("paginacion") or {}
+            if page >= int(pagination.get("total_paginas") or 1):
+                return results
+            page += 1
