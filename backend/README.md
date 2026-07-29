@@ -10,19 +10,18 @@ uvicorn app.main:app --reload
 
 Copia `.env.example` a `.env` y completa sus valores.
 
-## Producción
+## Producción gratuita en Vercel
 
-1. Crea una base PostgreSQL en Supabase, Neon u otro proveedor.
-2. Configura `DATABASE_URL` con la cadena PostgreSQL entregada por el proveedor.
-3. Despliega esta carpeta en Render o Railway con:
-   `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-4. Configura `FRONTEND_URL` con el dominio exacto del frontend.
-5. Configura un proveedor SMTP y las variables `SMTP_*`.
-6. Genera un valor largo y aleatorio para `CRON_SECRET`.
+1. En Vercel crea un segundo proyecto desde el mismo repositorio.
+2. Configura `backend` como **Root Directory**.
+3. No cambies Build Command ni Output Directory; Vercel detectará `app.py`.
+4. Configura `DATABASE_URL`, `MERCADO_PUBLICO_TICKET`, `FRONTEND_URL`,
+   `CRON_SECRET` y, cuando corresponda, las variables `SMTP_*`.
+5. Después del despliegue comprueba `/health` y `/docs`.
 
 ## Ejecución automática
 
-Un cron externo debe llamar cada 15 minutos:
+El workflow `.github/workflows/sync-opportunities.yml` llama cada 30 minutos:
 
 ```http
 POST /cron/daily-digests
@@ -31,6 +30,9 @@ Authorization: Bearer <CRON_SECRET>
 
 La llamada actualiza Mercado Público, detecta los perfiles cuya hora ya llegó y
 envía cada perfil una sola vez por día respetando su zona horaria.
+
+En GitHub configura los secretos `BACKEND_URL` (sin barra final) y
+`CRON_SECRET` desde Settings → Secrets and variables → Actions.
 
 Para una instalación pública se debe agregar autenticación de usuarios antes de
 permitir que terceros administren perfiles.

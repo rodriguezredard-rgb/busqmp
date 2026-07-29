@@ -6,9 +6,9 @@ rapidez y enviar resúmenes diarios configurables desde la web.
 ## Arquitectura
 
 - Frontend: React + Vite, desplegable en Vercel.
-- Backend: FastAPI, desplegable en Render o Railway.
+- Backend: FastAPI como función Python gratuita en un segundo proyecto Vercel.
 - Datos: SQLite en desarrollo y PostgreSQL/Supabase o Neon en producción.
-- Automatización: cron protegido que sincroniza y despacha correos pendientes.
+- Automatización: GitHub Actions cada 30 minutos, con endpoint protegido.
 
 ## Configuración del frontend
 
@@ -48,5 +48,5 @@ Las oportunidades de licitación se consultan con `estado=activas`, se guardan
 en `licitaciones_activas` y en cada sincronización se desactivan automáticamente
 las que ya no aparecen abiertas. El buscador no muestra las adjudicadas.
 
-El archivo `render.yaml` prepara el backend para Render y `vercel.json` construye
-automáticamente la aplicación ubicada en `frontend` desde el repositorio raíz.
+El `vercel.json` raíz construye el frontend. Para el backend, crea otro proyecto
+Vercel con Root Directory `backend`; su propio `vercel.json` publica FastAPI.
