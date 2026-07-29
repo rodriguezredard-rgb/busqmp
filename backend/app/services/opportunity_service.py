@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from app.models.database import SessionLocal
 from app.models.market_data import CompraAgil, LicitacionActiva
 
@@ -79,8 +81,7 @@ def sync_active_licitaciones(items: list[dict]) -> int:
     now = datetime.now(timezone.utc)
     db = SessionLocal()
     try:
-        db.query(LicitacionActiva).update({LicitacionActiva.activa: False})
-        saved = 0
+        rows = []
         for data in items:
             codigo = str(data.get("CodigoExterno") or "").strip()
             if not codigo:
@@ -90,7 +91,8 @@ def sync_active_licitaciones(items: list[dict]) -> int:
             nombre = str(data.get("Nombre") or "")
             descripcion = str(data.get("Descripcion") or "")
             organismo = str(comprador.get("NombreOrganismo") or "")
-            values = {
+            rows.append({
+                "codigo": codigo,
                 "nombre": nombre, "descripcion": descripcion,
                 "estado": str(data.get("Estado") or "publicada"),
                 "organismo": organismo, "region": str(comprador.get("RegionUnidad") or ""),
@@ -99,15 +101,21 @@ def sync_active_licitaciones(items: list[dict]) -> int:
                 "activa": True,
                 "search_text": " ".join([codigo, nombre, descripcion, organismo]).lower(),
                 "source_detail": data, "last_seen_at": now, "updated_at": now,
-            }
-            row = db.get(LicitacionActiva, codigo)
-            if row:
-                for key, value in values.items(): setattr(row, key, value)
-            else:
-                db.add(LicitacionActiva(codigo=codigo, **values))
-            saved += 1
+            })
+        if not rows:
+            return 0
+        db.query(LicitacionActiva).update({LicitacionActiva.activa: False})
+        insert_factory = postgresql_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+        update_columns = [key for key in rows[0] if key != "codigo"]
+        for start in range(0, len(rows), 500):
+            statement = insert_factory(LicitacionActiva).values(rows[start:start + 500])
+            statement = statement.on_conflict_do_update(
+                index_elements=[LicitacionActiva.codigo],
+                set_={key: getattr(statement.excluded, key) for key in update_columns},
+            )
+            db.execute(statement)
         db.commit()
-        return saved
+        return len(rows)
     except Exception:
         db.rollback()
         raise
