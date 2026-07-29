@@ -3,7 +3,7 @@ from app.models.database import Base
 
 
 class Opportunity(Base):
-    __tablename__ = "opportunities"
+    __tablename__ = "busqmp_opportunities"
     __table_args__ = (UniqueConstraint("source", "external_id", name="uq_opportunity_source_external_id"),)
 
     id = Column(Integer, primary_key=True, index=True)

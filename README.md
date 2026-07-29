@@ -29,6 +29,8 @@ correo programado.
 - Con `DATABASE_URL`, oportunidades y perfiles se guardan en PostgreSQL. En
   producción se recomienda usar la cadena de conexión de Supabase o Neon.
 - La aplicación no guarda datos en Vercel; Vercel aloja solamente el frontend.
+- Si comparte la base con Peken, crea únicamente `busqmp_opportunities` y
+  `busqmp_search_profiles`; no modifica las tablas propias de Peken.
 
 ## Fuente Mercado Público
 

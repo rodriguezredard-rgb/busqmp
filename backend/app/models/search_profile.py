@@ -3,7 +3,7 @@ from app.models.database import Base
 
 
 class SearchProfile(Base):
-    __tablename__ = "search_profiles"
+    __tablename__ = "busqmp_search_profiles"
 
     id = Column(Integer, primary_key=True)
     name = Column(String(150), nullable=False)
