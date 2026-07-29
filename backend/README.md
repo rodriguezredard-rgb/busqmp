@@ -14,7 +14,8 @@ Copia `.env.example` a `.env` y completa sus valores.
 
 1. En Vercel crea un segundo proyecto desde el mismo repositorio.
 2. Configura `backend` como **Root Directory**.
-3. No cambies Build Command ni Output Directory; Vercel detectará `app.py`.
+3. No cambies Build Command ni Output Directory; `vercel.json` publicará
+   `api_server.py` sin ocultar el paquete Python `app/`.
 4. Configura `DATABASE_URL`, `MERCADO_PUBLICO_TICKET`, `FRONTEND_URL`,
    `CRON_SECRET` y, cuando corresponda, las variables `SMTP_*`.
 5. Después del despliegue comprueba `/health` y `/docs`.
