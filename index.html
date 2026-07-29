@@ -74,7 +74,7 @@
       }
       .search-box h4 { margin: 0 0 8px; color: #0f172a; }
       .search-box p { margin: 0 0 12px; color: #64748b; font-size: 14px; }
-      input, button {
+      input, select, button {
         width: 100%;
         padding: 12px 14px;
         border-radius: 12px;
@@ -89,6 +89,12 @@
         font-weight: 700;
         margin-top: 8px;
       }
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+      }
       .list { display: grid; gap: 12px; margin-top: 24px; }
       .item { padding: 16px; }
       .item-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -96,6 +102,15 @@
       .meta { display: flex; gap: 12px; flex-wrap: wrap; color: #64748b; font-size: 13px; margin-top: 8px; }
       .source { color: #64748b; display: block; margin-top: 8px; font-size: 13px; }
       .section-title { padding: 16px 18px; margin-top: 26px; font-weight: 700; font-size: 18px; }
+      .results {
+        margin-top: 16px;
+        padding: 14px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+      }
+      .results strong { color: #0f172a; }
       @media (max-width: 768px) {
         .app { padding: 18px 14px 36px; }
         .hero { padding: 20px; }
@@ -134,19 +149,32 @@
         <div class="search-grid">
           <div class="search-box">
             <h4>🔎 Licitaciones</h4>
-            <p>Filtra por palabra clave, organismo o categoría.</p>
-            <input placeholder="Buscar licitaciones" />
-            <button>Buscar licitaciones</button>
+            <p>Filtra por palabra clave, organismo, estado, región y monto.</p>
+            <input id="licitacion-keyword" placeholder="Palabra clave" />
+            <div class="filters">
+              <select id="licitacion-estado"><option value="">Estado</option><option value="adjudicada">Adjudicada</option><option value="en_proceso">En proceso</option><option value="cerrada">Cerrada</option></select>
+              <select id="licitacion-tipo"><option value="">Tipo</option><option value="Licitación">Licitación</option><option value="Convenio">Convenio</option></select>
+              <select id="licitacion-organismo"><option value="">Organismo</option><option value="Municipalidad">Municipalidad</option><option value="Ministerio">Ministerio</option></select>
+              <select id="licitacion-region"><option value="">Región</option><option value="Metropolitana">Metropolitana</option><option value="Valparaíso">Valparaíso</option><option value="Biobío">Biobío</option></select>
+            </div>
+            <button onclick="buscarLicitaciones()">Buscar licitaciones</button>
           </div>
           <div class="search-box">
             <h4>⚡ Compras ágiles</h4>
-            <p>Encuentra oportunidades rápidas y prioriza tus oportunidades.</p>
-            <input placeholder="Buscar compras ágiles" />
-            <button>Buscar compras ágiles</button>
+            <p>Filtra por palabra clave, categoría, monto y fecha de publicación.</p>
+            <input id="agil-keyword" placeholder="Palabra clave" />
+            <div class="filters">
+              <select id="agil-categoria"><option value="">Categoría</option><option value="Servicios">Servicios</option><option value="Bienes">Bienes</option><option value="Obras">Obras</option></select>
+              <select id="agil-estado"><option value="">Estado</option><option value="abierta">Abierta</option><option value="cerrada">Cerrada</option></select>
+              <select id="agil-monto"><option value="">Monto</option><option value="menor_1m">Menor a 1 MM</option><option value="1m_5m">1 MM a 5 MM</option><option value="mayor_5m">Más de 5 MM</option></select>
+              <select id="agil-fecha"><option value="">Fecha</option><option value="hoy">Hoy</option><option value="semana">Última semana</option><option value="mes">Último mes</option></select>
+            </div>
+            <button onclick="buscarComprasAgiles()">Buscar compras ágiles</button>
           </div>
         </div>
       </div>
 
+      <div id="resultados" class="results" style="display:none;"></div>
       <div class="section-title">Oportunidades destacadas</div>
       <div class="list">
         <div class="item">
@@ -195,5 +223,62 @@
         </div>
       </div>
     </div>
+    <script>
+      async function buscarLicitaciones() {
+        const keyword = document.getElementById('licitacion-keyword').value;
+        const estado = document.getElementById('licitacion-estado').value;
+        const tipo = document.getElementById('licitacion-tipo').value;
+        const organismo = document.getElementById('licitacion-organismo').value;
+        const region = document.getElementById('licitacion-region').value;
+
+        const params = new URLSearchParams({
+          keyword,
+          estado,
+          tipo,
+          organismo,
+          region,
+        });
+
+        const resultBox = document.getElementById('resultados');
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '<strong>Buscando...</strong> consultando licitaciones...';
+
+        try {
+          const response = await fetch(`https://busqmp-backend.onrender.com/sync/market?${params.toString()}`);
+          const data = await response.json();
+          resultBox.innerHTML = `<strong>${data.count}</strong> licitaciones encontradas. <br>Filtros aplicados: ${JSON.stringify(data.filters)}`;
+        } catch (error) {
+          resultBox.innerHTML = 'No se pudo consultar el backend. Asegúrate de que la API esté activa.';
+        }
+      }
+
+      async function buscarComprasAgiles() {
+        const keyword = document.getElementById('agil-keyword').value;
+        const categoria = document.getElementById('agil-categoria').value;
+        const estado = document.getElementById('agil-estado').value;
+        const monto = document.getElementById('agil-monto').value;
+        const fecha = document.getElementById('agil-fecha').value;
+
+        const params = new URLSearchParams({
+          keyword,
+          categoria,
+          estado,
+          monto,
+          fecha,
+        });
+
+        const resultBox = document.getElementById('resultados');
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '<strong>Buscando...</strong> consultando compras ágiles...';
+
+        try {
+          const response = await fetch(`https://busqmp-backend.onrender.com/sync/agile?${params.toString()}`);
+          const data = await response.json();
+          resultBox.innerHTML = `<strong>${data.count}</strong> compras ágiles encontradas. <br>Filtros aplicados: ${JSON.stringify(data.filters)}`;
+        } catch (error) {
+          resultBox.innerHTML = 'No se pudo consultar el backend. Asegúrate de que la API esté activa.';
+        }
+      }
+    </script>
   </body>
 </html>
