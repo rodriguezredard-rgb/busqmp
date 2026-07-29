@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, DateTime, Integer, JSON, Numeric, String, Text
+from sqlalchemy import Boolean, Column, Date, DateTime, Integer, JSON, Numeric, String, Text
 from app.models.database import Base
 
 
@@ -16,6 +16,25 @@ class Licitacion(Base):
     fecha_adjudicacion = Column(Date, nullable=False)
     search_text = Column(Text, nullable=False)
     source_detail = Column(JSON, nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class LicitacionActiva(Base):
+    """Licitaciones abiertas para ofertar, sincronizadas desde la API oficial."""
+    __tablename__ = "licitaciones_activas"
+
+    codigo = Column(String(100), primary_key=True)
+    nombre = Column(Text, nullable=False, default="")
+    descripcion = Column(Text, nullable=False, default="")
+    estado = Column(String(80), nullable=False, default="publicada")
+    organismo = Column(Text, nullable=False, default="")
+    region = Column(String(150), nullable=False, default="")
+    fecha_publicacion = Column(DateTime(timezone=True), nullable=True)
+    fecha_cierre = Column(DateTime(timezone=True), nullable=True, index=True)
+    activa = Column(Boolean, nullable=False, default=True, index=True)
+    search_text = Column(Text, nullable=False, default="", index=True)
+    source_detail = Column(JSON, nullable=False, default=dict)
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)
 
 

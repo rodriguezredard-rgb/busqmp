@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from app.models.database import SessionLocal
-from app.models.market_data import CompraAgil, Licitacion
+from app.models.market_data import CompraAgil, LicitacionActiva
 
 
 def _datetime(value):
@@ -10,17 +10,15 @@ def _datetime(value):
 
 
 def _licitacion_dict(row):
-    detail = row.source_detail or {}
-    comprador = detail.get("Comprador") or {}
     return {
-        "id": f"licitacion:{row.id}", "source": "mercado_publico",
-        "opportunity_type": "licitacion", "external_id": row.id,
+        "id": f"licitacion:{row.codigo}", "source": "mercado_publico",
+        "opportunity_type": "licitacion", "external_id": row.codigo,
         "title": row.nombre, "description": row.descripcion,
-        "organization": row.organismo, "category": "", "amount": row.monto_licitacion,
-        "currency": row.moneda, "publish_date": None,
-        "award_date": row.fecha_adjudicacion, "closing_date": None,
-        "status": "adjudicada", "region": comprador.get("RegionUnidad", ""),
-        "url": detail.get("url") or detail.get("Url") or "",
+        "organization": row.organismo, "category": "", "amount": None,
+        "currency": "CLP", "publish_date": row.fecha_publicacion,
+        "award_date": None, "closing_date": row.fecha_cierre,
+        "status": row.estado, "region": row.region,
+        "url": "",
     }
 
 
@@ -74,6 +72,49 @@ def save_compra_agil(data: dict) -> None:
         db.close()
 
 
+def sync_active_licitaciones(items: list[dict]) -> int:
+    """Reemplaza lógicamente el inventario activo sin borrar su historial."""
+    if not items:
+        return 0
+    now = datetime.now(timezone.utc)
+    db = SessionLocal()
+    try:
+        db.query(LicitacionActiva).update({LicitacionActiva.activa: False})
+        saved = 0
+        for data in items:
+            codigo = str(data.get("CodigoExterno") or "").strip()
+            if not codigo:
+                continue
+            comprador = data.get("Comprador") or {}
+            fechas = data.get("Fechas") or {}
+            nombre = str(data.get("Nombre") or "")
+            descripcion = str(data.get("Descripcion") or "")
+            organismo = str(comprador.get("NombreOrganismo") or "")
+            values = {
+                "nombre": nombre, "descripcion": descripcion,
+                "estado": str(data.get("Estado") or "publicada"),
+                "organismo": organismo, "region": str(comprador.get("RegionUnidad") or ""),
+                "fecha_publicacion": _datetime(fechas.get("FechaPublicacion") or data.get("FechaPublicacion")),
+                "fecha_cierre": _datetime(fechas.get("FechaCierre") or data.get("FechaCierre")),
+                "activa": True,
+                "search_text": " ".join([codigo, nombre, descripcion, organismo]).lower(),
+                "source_detail": data, "last_seen_at": now, "updated_at": now,
+            }
+            row = db.get(LicitacionActiva, codigo)
+            if row:
+                for key, value in values.items(): setattr(row, key, value)
+            else:
+                db.add(LicitacionActiva(codigo=codigo, **values))
+            saved += 1
+        db.commit()
+        return saved
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 def list_opportunities(keyword="", opportunity_type="all", region="", organization="", status="",
                        minimum_amount=None, maximum_amount=None, limit=50, offset=0):
     db = SessionLocal()
@@ -81,16 +122,21 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
         results = []
         pattern = f"%{keyword}%"
         if opportunity_type in ("all", "licitacion"):
-            query = db.query(Licitacion)
-            if keyword: query = query.filter(Licitacion.search_text.ilike(pattern))
-            if organization: query = query.filter(Licitacion.organismo.ilike(f"%{organization}%"))
-            results.extend(_licitacion_dict(row) for row in query.order_by(Licitacion.updated_at.desc()).limit(limit + offset).all())
+            query = db.query(LicitacionActiva).filter(LicitacionActiva.activa.is_(True))
+            if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern))
+            if region: query = query.filter(LicitacionActiva.region.ilike(f"%{region}%"))
+            if organization: query = query.filter(LicitacionActiva.organismo.ilike(f"%{organization}%"))
+            if status: query = query.filter(LicitacionActiva.estado.ilike(f"%{status}%"))
+            results.extend(_licitacion_dict(row) for row in query.order_by(LicitacionActiva.fecha_cierre.asc()).limit(limit + offset).all())
         if opportunity_type in ("all", "compra_agil"):
             query = db.query(CompraAgil)
             if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern))
             if region: query = query.filter(CompraAgil.region.ilike(f"%{region}%"))
             if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))
-            if status: query = query.filter(CompraAgil.estado.ilike(f"%{status}%"))
+            if status:
+                query = query.filter(CompraAgil.estado.ilike(f"%{status}%"))
+            else:
+                query = query.filter(CompraAgil.estado == "publicada")
             if minimum_amount is not None: query = query.filter(CompraAgil.monto >= minimum_amount)
             if maximum_amount is not None: query = query.filter(CompraAgil.monto <= maximum_amount)
             results.extend(_agile_dict(row) for row in query.order_by(CompraAgil.fecha_ultimo_cambio.desc()).limit(limit + offset).all())

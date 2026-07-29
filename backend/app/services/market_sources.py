@@ -62,6 +62,16 @@ class MarketSourcesService:
             })
         return results
 
+    def fetch_active_licitaciones(self) -> list[dict]:
+        """Obtiene el inventario vigente de procesos donde aún se puede ofertar."""
+        if not self.ticket:
+            return []
+        url = "https://api.mercadopublico.cl/servicios/v1/publico/licitaciones.json"
+        response = requests.get(url, params={"ticket": self.ticket, "estado": "activas"}, timeout=60)
+        response.raise_for_status()
+        payload = response.json() if response.content else {}
+        return payload.get("Listado", []) if isinstance(payload, dict) else []
+
     def fetch_compra_agil(self, keyword: str = "", filters: dict | None = None,
                           minutes: int | None = None, page_size: int | None = None) -> list[dict]:
         if not self.ticket:

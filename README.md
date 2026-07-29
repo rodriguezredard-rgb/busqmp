@@ -29,9 +29,9 @@ correo programado.
 - Con `DATABASE_URL`, oportunidades y perfiles se guardan en PostgreSQL. En
   producción se recomienda usar la cadena de conexión de Supabase o Neon.
 - La aplicación no guarda datos en Vercel; Vercel aloja solamente el frontend.
-- Si comparte la base con Peken, reutiliza `licitaciones`, crea `compras_agiles`
-  para la API Compra Ágil V2 y guarda la configuración en
-  `busqmp_search_profiles`. No modifica `adjudicaciones` ni usuarios de Peken.
+- Si comparte la base con Peken, conserva `licitaciones` y `adjudicaciones` como
+  histórico. El buscador crea `licitaciones_activas`, `compras_agiles` y
+  `busqmp_search_profiles`, sin modificar el histórico ni los usuarios de Peken.
 
 ## Fuente Mercado Público
 
@@ -43,6 +43,10 @@ repositorio.
 Las Compras Ágiles se sincronizan incrementalmente desde
 `https://api2.mercadopublico.cl/v2/compra-agil`, usando el mismo ticket en el
 header HTTP y se almacenan en `compras_agiles`.
+
+Las oportunidades de licitación se consultan con `estado=activas`, se guardan
+en `licitaciones_activas` y en cada sincronización se desactivan automáticamente
+las que ya no aparecen abiertas. El buscador no muestra las adjudicadas.
 
 El archivo `render.yaml` prepara el backend para Render y `vercel.json` construye
 automáticamente la aplicación ubicada en `frontend` desde el repositorio raíz.
