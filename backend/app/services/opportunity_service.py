@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from app.models.database import SessionLocal
+from app.models.database import SessionLocal, initialize_database
 from app.models.market_data import CompraAgil, LicitacionActiva
 
 
@@ -38,6 +38,7 @@ def _agile_dict(row):
 
 
 def save_compra_agil(data: dict) -> None:
+    initialize_database()
     codigo = str(data.get("codigo") or "").strip()
     if not codigo:
         return
@@ -76,6 +77,7 @@ def save_compra_agil(data: dict) -> None:
 
 def sync_active_licitaciones(items: list[dict]) -> int:
     """Reemplaza lógicamente el inventario activo sin borrar su historial."""
+    initialize_database()
     if not items:
         return 0
     now = datetime.now(timezone.utc)
@@ -125,6 +127,7 @@ def sync_active_licitaciones(items: list[dict]) -> int:
 
 def list_opportunities(keyword="", opportunity_type="all", region="", organization="", status="",
                        minimum_amount=None, maximum_amount=None, limit=50, offset=0):
+    initialize_database()
     db = SessionLocal()
     try:
         results = []

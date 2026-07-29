@@ -6,6 +6,9 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+# Supabase entrega URLs postgresql://, pero este proyecto usa psycopg v3.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 API_TICKET = os.getenv("MERCADO_PUBLICO_TICKET", "")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")

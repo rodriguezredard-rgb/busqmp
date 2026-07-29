@@ -5,9 +5,6 @@ from app.routers.opportunities import router as opportunities_router
 from app.routers.sync import router as sync_router
 from app.routers.profiles import router as profiles_router
 from app.routers.cron import router as cron_router
-from app.models.database import Base, engine
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Peken v2.0", version="2.0.0", description="Buscador de oportunidades de mercado público y compras ágiles")
 
