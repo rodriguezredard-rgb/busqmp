@@ -20,6 +20,6 @@ jobs:
         run: |
           test -n "$BACKEND_URL"
           test -n "$CRON_SECRET"
-          curl --fail-with-body --retry 2 --max-time 240 \
+          curl --fail-with-body --location --retry 2 --max-time 240 \
             -X POST "$BACKEND_URL/cron/daily-digests" \
             -H "Authorization: Bearer $CRON_SECRET"
