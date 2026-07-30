@@ -18,8 +18,12 @@ export default function App() {
   const [form, setForm] = useState(emptyProfile);
   const [editingId, setEditingId] = useState(null);
   const [keyword, setKeyword] = useState('');
+  const [searchFilters, setSearchFilters] = useState({ opportunity_type: 'all', region: '', organization: '', status: '' });
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const pageSize = 20;
 
   async function loadProfiles() {
     const response = await fetch(`${API}/profiles`);
@@ -27,14 +31,20 @@ export default function App() {
     setProfiles(await response.json());
   }
 
-  async function search(event) {
+  async function search(event, requestedPage = 0) {
     event?.preventDefault();
     setLoading(true);
     try {
-      const params = new URLSearchParams({ keyword, limit: '100' });
+      const params = new URLSearchParams({ keyword, limit: String(pageSize), offset: String(requestedPage * pageSize) });
+      Object.entries(searchFilters).forEach(([key, value]) => {
+        if (value && value !== 'all') params.set(key, value);
+      });
       const response = await fetch(`${API}/opportunities?${params}`);
       if (!response.ok) throw new Error('No se pudo realizar la búsqueda');
       setItems(await response.json());
+      setTotal(Number(response.headers.get('X-Total-Count') || 0));
+      setPage(requestedPage);
+      setMessage('');
     } catch (error) { setMessage(error.message); }
     finally { setLoading(false); }
   }
@@ -72,7 +82,7 @@ export default function App() {
   const set = (field, value) => setForm((old) => ({ ...old, [field]: value }));
 
   return <main className="app">
-    <header><div><h1>Buscador de oportunidades</h1><p>Configura tu rubro y recibe un resumen diario.</p></div><span>{items.length} resultados</span></header>
+    <header><div><h1>Buscador de oportunidades</h1><p>Configura tu rubro y recibe un resumen diario.</p></div><span>{total.toLocaleString('es-CL')} resultados</span></header>
     {message && <div className="notice" onClick={() => setMessage('')}>{message}</div>}
 
     <section className="panel">
@@ -100,8 +110,17 @@ export default function App() {
       {!profiles.length && <p>Aún no tienes búsquedas programadas.</p>}
     </div></section>
 
-    <section className="panel"><h2>Buscar ahora</h2><form className="search" onSubmit={search}><input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Escribe una palabra clave" /><button>{loading ? 'Buscando…' : 'Buscar'}</button></form>
-      <div className="results">{items.map((item) => <article key={item.id}><strong>{item.title}</strong><p>{item.organization || 'Sin organismo'} · {item.region || 'Sin región'}</p><small>{item.opportunity_type} · {item.status || 'Sin estado'} {item.closing_date ? `· Cierra ${item.closing_date}` : ''}</small>{item.url && <a href={item.url} target="_blank" rel="noreferrer">Ver oportunidad</a>}</article>)}</div>
+    <section className="panel"><h2>Buscar ahora</h2><form className="search-filters" onSubmit={(event) => search(event, 0)}>
+      <label className="wide">Palabra clave<input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Ej. servicio, mantención, equipos" /></label>
+      <label>Tipo<select value={searchFilters.opportunity_type} onChange={(e) => setSearchFilters((old) => ({ ...old, opportunity_type: e.target.value }))}><option value="all">Todas</option><option value="licitacion">Licitaciones</option><option value="compra_agil">Compras ágiles</option></select></label>
+      <label>Región<input value={searchFilters.region} onChange={(e) => setSearchFilters((old) => ({ ...old, region: e.target.value }))} /></label>
+      <label>Organismo<input value={searchFilters.organization} onChange={(e) => setSearchFilters((old) => ({ ...old, organization: e.target.value }))} /></label>
+      <label>Estado<input value={searchFilters.status} onChange={(e) => setSearchFilters((old) => ({ ...old, status: e.target.value }))} /></label>
+      <div className="actions"><button disabled={loading}>{loading ? 'Buscando…' : 'Buscar'}</button></div>
+    </form>
+      <div className="result-summary"><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div>
+      <div className="results">{items.map((item) => <article key={item.id}><strong>{item.title}</strong><p>{item.organization || 'Sin organismo'} · {item.region || 'Sin región'}</p><small>{item.opportunity_type} · {item.status || 'Sin estado'} {item.closing_date ? `· Cierra ${new Date(item.closing_date).toLocaleString('es-CL')}` : ''}</small>{item.url && <a href={item.url} target="_blank" rel="noreferrer">Ver oportunidad</a>}</article>)}</div>
+      {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => search(null, page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => search(null, page + 1)}>Siguiente</button></nav>}
     </section>
   </main>;
 }

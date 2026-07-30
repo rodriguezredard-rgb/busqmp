@@ -20,7 +20,7 @@ def _licitacion_dict(row):
         "currency": "CLP", "publish_date": row.fecha_publicacion,
         "award_date": None, "closing_date": row.fecha_cierre,
         "status": row.estado, "region": row.region,
-        "url": "",
+        "url": f"https://www.mercadopublico.cl/Procurement/Modules/RFB/DetailsAcquisition.aspx?idlicitacion={row.codigo}",
     }
 
 
@@ -153,5 +153,36 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
             results.extend(_agile_dict(row) for row in query.order_by(CompraAgil.fecha_ultimo_cambio.desc()).limit(limit + offset).all())
         results.sort(key=lambda item: str(item.get("publish_date") or item.get("award_date") or ""), reverse=True)
         return results[offset:offset + limit]
+    finally:
+        db.close()
+
+
+def count_opportunities(keyword="", opportunity_type="all", region="", organization="", status="",
+                        minimum_amount=None, maximum_amount=None):
+    initialize_database()
+    db = SessionLocal()
+    try:
+        total = 0
+        pattern = f"%{keyword}%"
+        if opportunity_type in ("all", "licitacion"):
+            query = db.query(LicitacionActiva).filter(LicitacionActiva.activa.is_(True))
+            if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern))
+            if region: query = query.filter(LicitacionActiva.region.ilike(f"%{region}%"))
+            if organization: query = query.filter(LicitacionActiva.organismo.ilike(f"%{organization}%"))
+            if status: query = query.filter(LicitacionActiva.estado.ilike(f"%{status}%"))
+            total += query.count()
+        if opportunity_type in ("all", "compra_agil"):
+            query = db.query(CompraAgil)
+            if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern))
+            if region: query = query.filter(CompraAgil.region.ilike(f"%{region}%"))
+            if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))
+            if status:
+                query = query.filter(CompraAgil.estado.ilike(f"%{status}%"))
+            else:
+                query = query.filter(CompraAgil.estado == "publicada")
+            if minimum_amount is not None: query = query.filter(CompraAgil.monto >= minimum_amount)
+            if maximum_amount is not None: query = query.filter(CompraAgil.monto <= maximum_amount)
+            total += query.count()
+        return total
     finally:
         db.close()
