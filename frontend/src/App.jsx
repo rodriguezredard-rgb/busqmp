@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import CategoryPicker from './CategoryPicker';
 import KeywordTagInput from './KeywordTagInput';
 import Landing from './Landing';
-import { refreshSession, signOut, storedSession, updateCredentials } from './auth';
+import { recoverySession, refreshSession, signOut, storedSession, updateCredentials } from './auth';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const emptyProfile = {
@@ -31,8 +31,8 @@ function displayAmount(item) {
 }
 
 function Dashboard({ session, onSessionChange }) {
-  const [activeModule, setActiveModule] = useState('licitacion');
-  const [settingsPage, setSettingsPage] = useState('menu');
+  const [activeModule, setActiveModule] = useState(session.recovery ? 'settings' : 'licitacion');
+  const [settingsPage, setSettingsPage] = useState(session.recovery ? 'account' : 'menu');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('busqmp_theme') || 'system');
   const [items, setItems] = useState([]);
@@ -169,7 +169,7 @@ function Dashboard({ session, onSessionChange }) {
     const values = {};
     if (data.get('email')) values.email = data.get('email');
     if (data.get('password')) values.password = data.get('password');
-    try { await updateCredentials(session.access_token, values); setMessage('Credenciales actualizadas. Revisa tu correo si cambiaste el email.'); event.currentTarget.reset(); }
+    try { await updateCredentials(session.access_token, values); setMessage(session.recovery ? 'Contraseña actualizada correctamente. Ya puedes usar tu cuenta.' : 'Credenciales actualizadas. Revisa tu correo si cambiaste el email.'); event.currentTarget.reset(); }
     catch (error) { setMessage(error.message); } finally { setLoading(false); }
   }
 
@@ -253,7 +253,7 @@ function Dashboard({ session, onSessionChange }) {
 }
 
 export default function App() {
-  const [session, setSession] = useState(() => storedSession());
+  const [session, setSession] = useState(() => recoverySession() || storedSession());
 
   useEffect(() => {
     if (!session?.refresh_token) return;

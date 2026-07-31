@@ -251,6 +251,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .auth-switch { width: 100%; margin-top: 14px; color: var(--teal); background: transparent; font-size: 11px; font-weight: 500; }
 .auth-message, .auth-warning { padding: 9px 11px; border-radius: 8px; color: var(--forest); background: rgba(112,183,126,.15); font-size: 10px; }
 .auth-warning { margin-bottom: 14px; color: #8c5b00; background: #fff3d8; }
+.turnstile { min-height: 65px; overflow: hidden; }
 
 /* Theme variants */
 :root[data-theme="dark"] { color-scheme: dark; --ink: #e6f0ed; --muted: #9db3ad; --line: #294b44; --surface: #15342e; --soft: #193b35; background: #0d2823; }

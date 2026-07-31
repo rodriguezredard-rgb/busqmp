@@ -26,16 +26,36 @@ export function saveSession(session) {
   else localStorage.removeItem(STORAGE_KEY);
 }
 
+export function recoverySession() {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  if (params.get('type') !== 'recovery' || !params.get('access_token')) return null;
+  const session = {
+    access_token: params.get('access_token'), refresh_token: params.get('refresh_token'),
+    expires_at: Math.floor(Date.now() / 1000) + Number(params.get('expires_in') || 3600), user: {}, recovery: true,
+  };
+  saveSession(session);
+  window.history.replaceState({}, '', `${window.location.pathname}?recovery=1`);
+  return session;
+}
+
 export async function signIn(email, password) {
   const session = await request('login', { body: { email, password } });
   saveSession(session);
   return session;
 }
 
-export async function signUp(email, password) {
-  const data = await request('signup', { body: { email, password } });
+export async function signUp(email, password, captchaToken) {
+  const data = await request('signup', { body: { email, password, captcha_token: captchaToken } });
   if (data.access_token) saveSession(data);
   return data;
+}
+
+export async function authConfig() {
+  return request('config', { method: 'GET' });
+}
+
+export async function recoverPassword(email, captchaToken) {
+  return request('recover', { body: { email, captcha_token: captchaToken } });
 }
 
 export async function refreshSession(refreshToken) {

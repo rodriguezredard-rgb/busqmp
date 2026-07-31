@@ -1,7 +1,8 @@
 import requests
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, EmailStr, Field
-from app.core.config import SUPABASE_ANON_KEY, SUPABASE_URL
+from urllib.parse import quote
+from app.core.config import CAPTCHA_SITE_KEY, FRONTEND_URL, SUPABASE_ANON_KEY, SUPABASE_URL
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -9,6 +10,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 class Credentials(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6)
+    captcha_token: str | None = None
+
+
+class RecoveryPayload(BaseModel):
+    email: EmailStr
+    captcha_token: str
 
 
 class RefreshPayload(BaseModel):
@@ -44,7 +51,23 @@ def login(payload: Credentials):
 
 @router.post("/signup")
 def signup(payload: Credentials):
-    return supabase_request("signup", payload=payload.model_dump(mode="json"))
+    data = payload.model_dump(mode="json", exclude={"captcha_token"})
+    data["gotrue_meta_security"] = {"captcha_token": payload.captcha_token or ""}
+    return supabase_request("signup", payload=data)
+
+
+@router.get("/config")
+def auth_config():
+    return {"captcha_site_key": CAPTCHA_SITE_KEY}
+
+
+@router.post("/recover")
+def recover(payload: RecoveryPayload):
+    redirect = quote(f"{FRONTEND_URL}/?recovery=1", safe="")
+    return supabase_request(
+        f"recover?redirect_to={redirect}",
+        payload={"email": str(payload.email), "gotrue_meta_security": {"captcha_token": payload.captcha_token}},
+    )
 
 
 @router.post("/refresh")
