@@ -11,6 +11,21 @@ const emptyProfile = {
   delivery_time: '09:00', timezone: 'America/Santiago', enabled: true,
 };
 
+function displayDate(value) {
+  return value ? new Date(value).toLocaleString('es-CL') : 'No informada';
+}
+
+function displayAmount(item) {
+  if (item.amount == null) return 'Monto no informado';
+  try {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency', currency: item.currency || 'CLP', maximumFractionDigits: 0,
+    }).format(item.amount);
+  } catch {
+    return `$ ${Number(item.amount).toLocaleString('es-CL')} ${item.currency || 'CLP'}`;
+  }
+}
+
 export default function App() {
   const [activeModule, setActiveModule] = useState('licitacion');
   const [items, setItems] = useState([]);
@@ -152,7 +167,7 @@ export default function App() {
           <div className="actions"><button disabled={loading}>{loading ? 'Buscando…' : `Buscar ${isAgile ? 'compras ágiles' : 'licitaciones'}`}</button></div>
         </form>
         <div className="result-summary"><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div>
-        <div className="results">{items.map((item) => <article key={item.id}><div className="result-type">{item.opportunity_type === 'compra_agil' ? 'Compra Ágil' : 'Licitación'}</div><strong>{item.title}</strong><p>{item.organization || 'Sin organismo'} · {item.region || 'Sin región'}</p><small>{item.status || 'Sin estado'} {item.closing_date ? `· Cierra ${new Date(item.closing_date).toLocaleString('es-CL')}` : ''}</small>{item.url && <a href={item.url} target="_blank" rel="noreferrer">Ver oportunidad</a>}</article>)}</div>
+        <div className="results">{items.map((item) => <article key={item.id}><div className="result-type">{item.opportunity_type === 'compra_agil' ? 'Compra Ágil' : 'Licitación'}</div><strong>{item.title}</strong><p>{item.organization || 'Organismo no informado'} · {item.region || 'Región no informada'}</p><div className="result-metadata"><span><small>Publicación</small>{displayDate(item.publish_date)}</span><span><small>Cierre</small>{displayDate(item.closing_date)}</span><span><small>{item.opportunity_type === 'compra_agil' ? 'Monto disponible' : 'Monto estimado'}</small>{displayAmount(item)}</span></div><small>{item.status || 'Sin estado'}</small>{item.url && <a href={item.url} target="_blank" rel="noreferrer">Ver oportunidad</a>}</article>)}</div>
         {!loading && !items.length && <div className="empty-state">No hay resultados para los filtros seleccionados.</div>}
         {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => search(null, page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => search(null, page + 1)}>Siguiente</button></nav>}
       </section>

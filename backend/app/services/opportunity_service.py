@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy import or_
 from app.models.database import SessionLocal, initialize_database
 import json
 from app.models.market_data import CompraAgil, LicitacionActiva, OpportunityCategory
@@ -147,6 +148,18 @@ def save_opportunity_categories(code: str, detail: dict, source: str) -> int:
         row.category_codes = json.dumps([item[0] for item in pairs], ensure_ascii=False)
         row.category_names = json.dumps([item[1] for item in pairs] or ["Sin categoría disponible"], ensure_ascii=False)
         row.source_detail = detail
+        if source == "licitacion":
+            buyer = detail.get("Comprador") or {}
+            dates = detail.get("Fechas") or {}
+            row.descripcion = str(detail.get("Descripcion") or row.descripcion or "")
+            row.organismo = str(buyer.get("NombreOrganismo") or buyer.get("NombreUnidad") or "No informado")
+            row.region = str(buyer.get("RegionUnidad") or buyer.get("RegionOrganismo") or "")
+            row.fecha_publicacion = _datetime(dates.get("FechaPublicacion") or detail.get("FechaPublicacion"))
+            row.fecha_cierre = (_datetime(dates.get("FechaCierre") or detail.get("FechaCierre"))
+                                or row.fecha_cierre)
+            row.search_text = " ".join([
+                row.codigo, row.nombre, row.descripcion, row.organismo,
+            ]).lower()
         now = datetime.now(timezone.utc)
         for category_code, category_name in pairs:
             category = db.get(OpportunityCategory, category_code)
@@ -182,6 +195,10 @@ def list_unenriched_codes(source: str, limit: int = 5) -> list[str]:
         model = LicitacionActiva if source == "licitacion" else CompraAgil
         query = db.query(model).filter(model.category_names == "[]")
         if source == "licitacion":
+            query = db.query(model).filter(or_(
+                model.category_names == "[]",
+                model.organismo == "",
+            ))
             query = query.filter(LicitacionActiva.activa.is_(True))
         return [row.codigo for row in query.limit(limit).all()]
     finally:
@@ -221,7 +238,15 @@ def sync_active_licitaciones(items: list[dict]) -> int:
             return 0
         db.query(LicitacionActiva).update({LicitacionActiva.activa: False})
         insert_factory = postgresql_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
-        update_columns = [key for key in rows[0] if key != "codigo"]
+        # El listado de activas es un resumen y suele omitir metadatos. Esos
+        # campos provienen del detalle enriquecido y no deben borrarse en el
+        # siguiente ciclo de sincronización.
+        preserved_detail_columns = {
+            "descripcion", "organismo", "region", "fecha_publicacion",
+            "search_text", "source_detail",
+        }
+        update_columns = [key for key in rows[0]
+                          if key != "codigo" and key not in preserved_detail_columns]
         for start in range(0, len(rows), 500):
             statement = insert_factory(LicitacionActiva).values(rows[start:start + 500])
             statement = statement.on_conflict_do_update(

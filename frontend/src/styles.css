@@ -100,6 +100,9 @@ article p { margin: 5px 0; color: var(--muted); }
 .search-filters { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .results article { display: block; }
 .result-type { margin-bottom: 8px; padding: 4px 8px; }
+.result-metadata { display: flex; flex-wrap: wrap; gap: 10px; margin: 11px 0 8px; }
+.result-metadata span { display: grid; gap: 2px; min-width: 150px; padding: 8px 10px; border-radius: 9px; color: var(--forest); background: #70b77e12; font-size: 13px; font-weight: 650; }
+.result-metadata small { font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
 .results a { display: inline-block; margin-top: 8px; color: var(--magenta); font-weight: 700; }
 .empty-state { margin-top: 14px; padding: 24px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); text-align: center; background: #70b77e12; }
 .result-summary { display: flex; justify-content: space-between; margin-top: 22px; color: var(--forest); }
