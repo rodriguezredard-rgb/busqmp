@@ -1,3 +1,4 @@
+// Vite incorpora estas variables públicas al crear cada deployment.
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const STORAGE_KEY = 'busqmp_session';
