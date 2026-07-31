@@ -40,7 +40,7 @@ jobs:
                 *" $current_source "*) continue ;;
               esac
               active_sources=$((active_sources + 1))
-              response=$(curl --silent --show-error --fail-with-body --location \
+              response=$(curl --silent --show-error --fail --location \
                 --max-time 240 --retry 5 --retry-delay 15 --retry-max-time 600 --retry-all-errors \
                 -X POST "$BACKEND_URL/cron/enrich-categories?source=$current_source&limit=5" \
                 -H "Authorization: Bearer $CRON_SECRET")
