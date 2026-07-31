@@ -9,10 +9,6 @@ on:
         description: "Fuente: licitacion, compra_agil o both"
         required: true
         default: "both"
-      batches:
-        description: "Cantidad de lotes de 5 oportunidades"
-        required: true
-        default: "5"
 
 permissions:
   contents: read
@@ -20,35 +16,48 @@ permissions:
 jobs:
   enrich:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 300
     steps:
       - name: Extraer categorias observadas
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           SOURCE: ${{ inputs.source || 'both' }}
-          BATCHES: ${{ inputs.batches || '5' }}
         run: |
+          test -n "$BACKEND_URL"
+          test -n "$CRON_SECRET"
           if [ "$SOURCE" = "both" ]; then
             sources="licitacion compra_agil"
           else
             sources="$SOURCE"
           fi
-          for current_source in $sources; do
-            for batch in $(seq 1 "$BATCHES"); do
-              response=$(curl --silent --show-error --fail-with-body --location --max-time 240 \
+          completed_sources=""
+          total_processed=0
+          while true; do
+            active_sources=0
+            for current_source in $sources; do
+              case " $completed_sources " in
+                *" $current_source "*) continue ;;
+              esac
+              active_sources=$((active_sources + 1))
+              response=$(curl --silent --show-error --fail-with-body --location \
+                --max-time 240 --retry 5 --retry-delay 15 --retry-max-time 600 --retry-all-errors \
                 -X POST "$BACKEND_URL/cron/enrich-categories?source=$current_source&limit=5" \
                 -H "Authorization: Bearer $CRON_SECRET")
               echo "$response"
               attempted=$(echo "$response" | jq -r '.attempted // 0')
               processed=$(echo "$response" | jq -r '.processed // 0')
+              total_processed=$((total_processed + processed))
               if [ "$attempted" -eq 0 ]; then
                 echo "No quedan oportunidades pendientes para $current_source."
-                break
-              fi
-              if [ "$processed" -eq 0 ]; then
-                echo "El lote completo fallo; se detiene $current_source para evitar reintentos repetidos."
-                break
+                completed_sources="$completed_sources $current_source"
+              elif [ "$processed" -eq 0 ]; then
+                echo "El lote completo fallo; $current_source continuara en la proxima ejecucion diaria."
+                completed_sources="$completed_sources $current_source"
               fi
             done
+            if [ "$active_sources" -eq 0 ]; then
+              break
+            fi
           done
+          echo "Enriquecimiento finalizado: $total_processed oportunidades procesadas."
