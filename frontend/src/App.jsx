@@ -152,11 +152,11 @@ export default function App() {
         <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>CA</span><div><strong>Compras Ágiles</strong><small>Oportunidades rápidas</small></div></button>
         <button className={activeModule === 'profiles' ? 'active' : ''} onClick={() => switchModule('profiles')}><span>R</span><div><strong>Rubros guardados</strong><small>Palabras y exclusiones</small></div></button>
       </nav>
-      <div className="sidebar-note">Datos sincronizados automáticamente desde Mercado Público.</div>
+      <div className="sidebar-note"><span className="live-dot" aria-hidden="true" />Datos sincronizados automáticamente desde Mercado Público.</div>
     </aside>
 
     <main className="app">
-      <header><div><small className="eyebrow">Módulo</small><h1>{isProfiles ? 'Rubros guardados' : isAgile ? 'Compras Ágiles' : 'Licitaciones'}</h1><p>{isProfiles ? 'Configura palabras clave, exclusiones y alertas diarias.' : isAgile ? 'Explora oportunidades de compra rápida.' : 'Encuentra procesos activos para ofertar.'}</p></div>{!isProfiles && <span>{total.toLocaleString('es-CL')} resultados</span>}</header>
+      <header className="page-header"><div><small className="eyebrow">Módulo</small><h1>{isProfiles ? 'Rubros guardados' : isAgile ? 'Compras Ágiles' : 'Licitaciones'}</h1><p>{isProfiles ? 'Configura palabras clave, exclusiones y alertas diarias.' : isAgile ? 'Explora oportunidades de compra rápida.' : 'Encuentra procesos activos para ofertar.'}</p></div>{!isProfiles && <span className="result-count"><strong>{total.toLocaleString('es-CL')}</strong> resultados</span>}</header>
       {message && <div className="notice" onClick={() => setMessage('')}>{message}</div>}
 
       {!isProfiles && <>
@@ -169,7 +169,13 @@ export default function App() {
           <div className="actions"><button disabled={loading}>{loading ? 'Buscando…' : `Buscar ${isAgile ? 'compras ágiles' : 'licitaciones'}`}</button></div>
         </form>
         <div className="result-summary"><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div>
-        <div className="results">{items.map((item) => <article key={item.id}><div className="result-type">{item.opportunity_type === 'compra_agil' ? 'Compra Ágil' : 'Licitación'}</div><strong>{item.title}</strong><p>{item.organization || 'Organismo no informado'} · {item.region || 'Región no informada'}</p><div className="result-metadata"><span><small>Publicación</small>{displayDate(item.publish_date)}</span><span><small>Cierre</small>{displayDate(item.closing_date)}</span><span><small>{item.opportunity_type === 'compra_agil' ? 'Monto disponible' : 'Monto estimado'}</small>{displayAmount(item)}</span></div><small>{item.status || 'Sin estado'}</small>{item.url && <a href={item.url} target="_blank" rel="noreferrer">Ver oportunidad</a>}</article>)}</div>
+        <div className="results">{items.map((item) => <article className="result-card" key={item.id}>
+          <div className="result-card-head"><div className="result-labels"><span className="result-type">{item.opportunity_type === 'compra_agil' ? 'Compra Ágil' : 'Licitación'}</span><span className="result-code">{item.external_id}</span></div><span className="status-pill">{item.status || 'Sin estado'}</span></div>
+          <h3 className="result-title">{item.title}</h3>
+          <p className="result-organization"><span>{item.organization || 'Organismo no informado'}</span><span>{item.region || 'Región no informada'}</span></p>
+          <div className="result-metadata"><span><small>Publicación</small>{displayDate(item.publish_date)}</span><span><small>Cierre</small>{displayDate(item.closing_date)}</span><span className="amount"><small>{item.opportunity_type === 'compra_agil' ? 'Monto disponible' : 'Monto estimado'}</small>{displayAmount(item)}</span></div>
+          {item.url && <a className="result-link" href={item.url} target="_blank" rel="noreferrer">Ver oportunidad <span aria-hidden="true">↗</span></a>}
+        </article>)}</div>
         {!loading && !items.length && <div className="empty-state">No hay resultados para los filtros seleccionados.</div>}
         {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => search(null, page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => search(null, page + 1)}>Siguiente</button></nav>}
       </section>
