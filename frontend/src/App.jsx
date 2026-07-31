@@ -26,6 +26,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const pageSize = 20;
   const isAgile = activeModule === 'compra_agil';
+  const isProfiles = activeModule === 'profiles';
 
   async function loadProfiles() {
     const response = await fetch(`${API}/profiles`);
@@ -61,6 +62,10 @@ export default function App() {
 
   function switchModule(module) {
     setActiveModule(module);
+    if (module === 'profiles') {
+      setMessage('');
+      return;
+    }
     setItems([]);
     setTotal(0);
     setPage(0);
@@ -113,14 +118,16 @@ export default function App() {
       <nav className="module-nav" aria-label="Módulos de oportunidades">
         <button className={activeModule === 'licitacion' ? 'active' : ''} onClick={() => switchModule('licitacion')}><span>L</span><div><strong>Licitaciones</strong><small>Procesos activos</small></div></button>
         <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>CA</span><div><strong>Compras Ágiles</strong><small>Oportunidades rápidas</small></div></button>
+        <button className={activeModule === 'profiles' ? 'active' : ''} onClick={() => switchModule('profiles')}><span>R</span><div><strong>Rubros guardados</strong><small>Palabras y exclusiones</small></div></button>
       </nav>
       <div className="sidebar-note">Datos sincronizados automáticamente desde Mercado Público.</div>
     </aside>
 
     <main className="app">
-      <header><div><small className="eyebrow">Módulo</small><h1>{isAgile ? 'Compras Ágiles' : 'Licitaciones'}</h1><p>{isAgile ? 'Explora oportunidades de compra rápida.' : 'Encuentra procesos activos para ofertar.'}</p></div><span>{total.toLocaleString('es-CL')} resultados</span></header>
+      <header><div><small className="eyebrow">Módulo</small><h1>{isProfiles ? 'Rubros guardados' : isAgile ? 'Compras Ágiles' : 'Licitaciones'}</h1><p>{isProfiles ? 'Configura palabras clave, exclusiones y alertas diarias.' : isAgile ? 'Explora oportunidades de compra rápida.' : 'Encuentra procesos activos para ofertar.'}</p></div>{!isProfiles && <span>{total.toLocaleString('es-CL')} resultados</span>}</header>
       {message && <div className="notice" onClick={() => setMessage('')}>{message}</div>}
 
+      {!isProfiles && <>
       <section className="panel module-panel"><div className="section-heading"><div><h2>Buscar {isAgile ? 'compras ágiles' : 'licitaciones'}</h2><p>Filtra los registros guardados en la base de oportunidades.</p></div><span className="module-chip">{isAgile ? 'Compra Ágil' : 'Licitación'}</span></div>
         <form className="search-filters" onSubmit={(event) => search(event, 0)}>
           <label className="wide">Palabra clave<input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Ej. servicio, mantención, equipos" /></label>
@@ -134,9 +141,12 @@ export default function App() {
         {!loading && !items.length && <div className="empty-state">No hay resultados para los filtros seleccionados.</div>}
         {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => search(null, page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => search(null, page + 1)}>Siguiente</button></nav>}
       </section>
+      </>}
 
+      {isProfiles && <>
       <section className="panel">
         <h2>{editingId ? 'Editar búsqueda programada' : 'Nueva búsqueda programada'}</h2>
+        <p className="panel-intro">Guarda un rubro y define qué palabras deben aparecer y cuáles deben descartarse.</p>
         <form onSubmit={saveProfile} className="grid">
           <label>Nombre del perfil<input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej. Servicios eléctricos" /></label>
           <label>Rubro<input required value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Ej. Electricidad industrial" /></label>
@@ -156,9 +166,10 @@ export default function App() {
       </section>
 
       <section className="panel"><h2>Mis búsquedas programadas</h2><div className="profiles">
-        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p>{profile.industry} · {profile.delivery_time} · {profile.recipient_email}</p><small>{profile.include_keywords.join(', ') || 'Sin palabras definidas'} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
+        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p><span className="profile-industry">{profile.industry}</span> · {profile.delivery_time} · {profile.recipient_email}</p><small><b>Incluye:</b> {profile.include_keywords.join(', ') || 'Todas'} · <b>Excluye:</b> {profile.exclude_keywords.join(', ') || 'Ninguna'} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
         {!profiles.length && <p>Aún no tienes búsquedas programadas.</p>}
       </div></section>
+      </>}
     </main>
   </div>;
 }
