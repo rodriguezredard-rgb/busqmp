@@ -55,7 +55,7 @@ def _agile_dict(row):
         "currency": row.moneda, "publish_date": row.fecha_publicacion,
         "award_date": None, "closing_date": row.fecha_cierre,
         "status": row.estado, "region": row.region,
-        "url": f"https://licitacionesdechile.cl/compra-agil/{row.codigo}",
+        "url": f"https://buscador.mercadopublico.cl/ficha?code={row.codigo}",
     }
 
 
