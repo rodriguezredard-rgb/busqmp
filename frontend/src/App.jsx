@@ -71,6 +71,9 @@ export default function App() {
     setActiveModule(module);
     if (module === 'profiles') {
       setMessage('');
+      const requests = [loadProfiles()];
+      if (!categories.length) requests.push(loadCategories());
+      Promise.all(requests).catch((error) => setMessage(error.message));
       return;
     }
     setItems([]);
@@ -80,7 +83,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    Promise.all([loadProfiles(), loadCategories(), search(null, 0, 'licitacion')]).catch((error) => setMessage(error.message));
+    search(null, 0, 'licitacion').catch((error) => setMessage(error.message));
   }, []);
 
   async function saveProfile(event) {

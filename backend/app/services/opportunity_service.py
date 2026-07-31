@@ -164,7 +164,6 @@ def save_opportunity_categories(code: str, detail: dict, source: str) -> int:
 
 
 def list_categories(search: str = "", limit: int = 200):
-    initialize_database()
     db = SessionLocal()
     try:
         query = db.query(OpportunityCategory)
@@ -241,7 +240,6 @@ def sync_active_licitaciones(items: list[dict]) -> int:
 
 def list_opportunities(keyword="", opportunity_type="all", region="", organization="", status="",
                        minimum_amount=None, maximum_amount=None, limit=50, offset=0):
-    initialize_database()
     db = SessionLocal()
     try:
         results = []
@@ -273,7 +271,6 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
 
 def count_opportunities(keyword="", opportunity_type="all", region="", organization="", status="",
                         minimum_amount=None, maximum_amount=None):
-    initialize_database()
     db = SessionLocal()
     try:
         total = 0

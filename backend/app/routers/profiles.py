@@ -3,7 +3,7 @@ from datetime import time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
-from app.models.database import SessionLocal, initialize_database
+from app.models.database import SessionLocal
 from app.models.search_profile import SearchProfile
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -28,7 +28,6 @@ class ProfilePayload(BaseModel):
 
 
 def get_db():
-    initialize_database()
     db = SessionLocal()
     try:
         yield db
