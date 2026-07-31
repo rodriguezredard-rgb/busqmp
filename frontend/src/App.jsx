@@ -124,6 +124,9 @@ export default function App() {
     ? form.selected_categories.filter((item) => item !== code)
     : [...form.selected_categories, code]);
   const visibleCategories = categories.filter((item) => `${item.code} ${item.name}`.toLowerCase().includes(categorySearch.toLowerCase()));
+  const selectedCategoryItems = form.selected_categories.map((code) => (
+    categories.find((category) => category.code === code) || { code, name: code }
+  ));
 
   return <div className="app-shell">
     <aside className="sidebar">
@@ -165,7 +168,7 @@ export default function App() {
           <label>Rubro<input required value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Ej. Electricidad industrial" /></label>
           <label className="wide">Palabras que debe buscar<input value={form.include_keywords.join(', ')} onChange={(e) => set('include_keywords', words(e.target.value))} placeholder="tableros eléctricos, cableado, mantención" /><small>Sepáralas con comas.</small></label>
           <label className="wide">Palabras que debe excluir<input value={form.exclude_keywords.join(', ')} onChange={(e) => set('exclude_keywords', words(e.target.value))} placeholder="arriendo, usado" /></label>
-          <fieldset className="category-picker wide"><legend>Rubros de Mercado Público</legend><input value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} placeholder="Buscar por nombre o código ONU" /><div className="category-options">{visibleCategories.map((category) => <label key={category.code}><input type="checkbox" checked={form.selected_categories.includes(category.code)} onChange={() => toggleCategory(category.code)} /><span>{category.name}<small>{category.code}</small></span></label>)}{!visibleCategories.length && <p>Aún no hay rubros catalogados. Ejecuta el enriquecimiento inicial.</p>}</div><small>{form.selected_categories.length} rubros seleccionados</small></fieldset>
+          <fieldset className="category-picker wide"><legend>Rubros de Mercado Público</legend><input value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} placeholder="Buscar por nombre o código ONU" />{selectedCategoryItems.length > 0 && <div className="selected-categories" aria-label="Rubros seleccionados">{selectedCategoryItems.map((category) => <button key={category.code} type="button" className="selected-tag" onClick={() => toggleCategory(category.code)} title="Quitar rubro"><span>{category.name}</span><b aria-hidden="true">×</b></button>)}</div>}<div className="category-options">{visibleCategories.map((category) => { const selected = form.selected_categories.includes(category.code); return <button key={category.code} type="button" className={`category-tag${selected ? ' selected' : ''}`} aria-pressed={selected} onClick={() => toggleCategory(category.code)}><span>{category.name}</span><small>{category.code}</small></button>; })}{!visibleCategories.length && <p>Aún no hay rubros catalogados. Ejecuta el enriquecimiento inicial.</p>}</div><small>{form.selected_categories.length} rubros seleccionados · Pulsa un tag para agregarlo o quitarlo.</small></fieldset>
           <label>Tipo<select value={form.opportunity_type} onChange={(e) => set('opportunity_type', e.target.value)}><option value="all">Todas</option><option value="licitacion">Licitación</option><option value="compra_agil">Compra ágil</option></select></label>
           <label>Región<input value={form.region} onChange={(e) => set('region', e.target.value)} /></label>
           <label>Organismo<input value={form.organization} onChange={(e) => set('organization', e.target.value)} /></label>
