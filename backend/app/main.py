@@ -5,6 +5,7 @@ from app.routers.opportunities import router as opportunities_router
 from app.routers.sync import router as sync_router
 from app.routers.profiles import router as profiles_router
 from app.routers.cron import router as cron_router
+from app.routers.auth import router as auth_router
 
 app = FastAPI(title="Peken v2.0", version="2.0.0", description="Buscador de oportunidades de mercado público y compras ágiles")
 
@@ -21,6 +22,7 @@ app.include_router(opportunities_router)
 app.include_router(sync_router)
 app.include_router(profiles_router)
 app.include_router(cron_router)
+app.include_router(auth_router)
 
 
 @app.get("/health")

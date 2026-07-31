@@ -1,23 +1,19 @@
-// Vite incorpora estas variables públicas al crear cada deployment nuevo.
-const URL = import.meta.env.VITE_SUPABASE_URL;
-const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const STORAGE_KEY = 'busqmp_session';
 
-export const authConfigured = Boolean(URL && KEY);
+export const authConfigured = Boolean(API);
 
 async function request(path, { method = 'POST', body, token } = {}) {
-  if (!authConfigured) throw new Error('La autenticación aún no está configurada.');
-  const response = await fetch(`${URL}/auth/v1/${path}`, {
+  const response = await fetch(`${API}/auth/${path}`, {
     method,
     headers: {
-      apikey: KEY,
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const data = response.status === 204 ? {} : await response.json();
-  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || 'No fue posible completar la solicitud.');
+  if (!response.ok) throw new Error(data.detail || data.msg || data.message || data.error_description || 'No fue posible completar la solicitud.');
   return data;
 }
 
@@ -31,7 +27,7 @@ export function saveSession(session) {
 }
 
 export async function signIn(email, password) {
-  const session = await request('token?grant_type=password', { body: { email, password } });
+  const session = await request('login', { body: { email, password } });
   saveSession(session);
   return session;
 }
@@ -43,13 +39,13 @@ export async function signUp(email, password) {
 }
 
 export async function refreshSession(refreshToken) {
-  const session = await request('token?grant_type=refresh_token', { body: { refresh_token: refreshToken } });
+  const session = await request('refresh', { body: { refresh_token: refreshToken } });
   saveSession(session);
   return session;
 }
 
 export async function updateCredentials(token, values) {
-  return request('user', { method: 'PUT', token, body: values });
+  return request('credentials', { method: 'PUT', token, body: values });
 }
 
 export async function signOut(token) {
