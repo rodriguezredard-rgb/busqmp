@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import CategoryPicker from './CategoryPicker';
+import KeywordTagInput from './KeywordTagInput';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const emptyProfile = {
@@ -10,10 +11,6 @@ const emptyProfile = {
   delivery_time: '09:00', timezone: 'America/Santiago', enabled: true,
 };
 
-function words(value) {
-  return value.split(',').map((item) => item.trim()).filter(Boolean);
-}
-
 export default function App() {
   const [activeModule, setActiveModule] = useState('licitacion');
   const [items, setItems] = useState([]);
@@ -21,8 +18,6 @@ export default function App() {
   const [categories, setCategories] = useState([]);
   const [categorySearch, setCategorySearch] = useState('');
   const [form, setForm] = useState(emptyProfile);
-  const [includeKeywordsText, setIncludeKeywordsText] = useState('');
-  const [excludeKeywordsText, setExcludeKeywordsText] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [searchFilters, setSearchFilters] = useState({ region: '', organization: '', status: '' });
@@ -97,17 +92,11 @@ export default function App() {
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          include_keywords: words(includeKeywordsText),
-          exclude_keywords: words(excludeKeywordsText),
-        }),
+        body: JSON.stringify(form),
       });
       if (!response.ok) throw new Error('Revisa el correo y los datos ingresados');
       setMessage('Configuración guardada correctamente.');
       setForm(emptyProfile);
-      setIncludeKeywordsText('');
-      setExcludeKeywordsText('');
       setEditingId(null);
       await loadProfiles();
     } catch (error) {
@@ -120,8 +109,6 @@ export default function App() {
   function edit(profile) {
     setEditingId(profile.id);
     setForm({ ...profile });
-    setIncludeKeywordsText(profile.include_keywords.join(', '));
-    setExcludeKeywordsText(profile.exclude_keywords.join(', '));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -175,8 +162,8 @@ export default function App() {
         <form onSubmit={saveProfile} className="grid">
           <label>Nombre del perfil<input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej. Servicios eléctricos" /></label>
           <label>Rubro<input required value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Ej. Electricidad industrial" /></label>
-          <label className="wide">Palabras que debe buscar<input value={includeKeywordsText} onChange={(e) => setIncludeKeywordsText(e.target.value)} placeholder="vet*, cableado, mantención" /><small>Sepáralas con comas. Usa * para incluir variantes con el mismo inicio: vet* encuentra veterinaria, veterinario y veterinarios.</small></label>
-          <label className="wide">Palabras que debe excluir<input value={excludeKeywordsText} onChange={(e) => setExcludeKeywordsText(e.target.value)} placeholder="arriend*, usado" /><small>También puedes usar * para excluir todas las variantes de una palabra.</small></label>
+          <label className="wide">Palabras que debe buscar<KeywordTagInput key={`${editingId ?? 'new'}-include`} value={form.include_keywords} onChange={(value) => set('include_keywords', value)} placeholder="Ej. vet*, cableado, mantención" /><small>Presiona coma o Enter para agregar cada tag. Usa * para incluir variantes: vet* encuentra veterinaria y veterinarios.</small></label>
+          <label className="wide">Palabras que debe excluir<KeywordTagInput key={`${editingId ?? 'new'}-exclude`} value={form.exclude_keywords} onChange={(value) => set('exclude_keywords', value)} placeholder="Ej. arriend*, usado" tone="exclude" /><small>Estas palabras y sus variantes no aparecerán en los resultados enviados.</small></label>
           <CategoryPicker categories={categories} selected={form.selected_categories} search={categorySearch} onSearch={setCategorySearch} toggle={toggleCategory} />
           <label>Tipo<select value={form.opportunity_type} onChange={(e) => set('opportunity_type', e.target.value)}><option value="all">Todas</option><option value="licitacion">Licitación</option><option value="compra_agil">Compra ágil</option></select></label>
           <label>Región<input value={form.region} onChange={(e) => set('region', e.target.value)} /></label>
@@ -187,7 +174,7 @@ export default function App() {
           <label>Correo destinatario<input required type="email" value={form.recipient_email} onChange={(e) => set('recipient_email', e.target.value)} /></label>
           <label>Hora diaria<input required type="time" value={form.delivery_time} onChange={(e) => set('delivery_time', e.target.value)} /></label>
           <label className="check"><input type="checkbox" checked={form.enabled} onChange={(e) => set('enabled', e.target.checked)} /> Envío diario activo</label>
-          <div className="actions"><button disabled={loading}>{editingId ? 'Guardar cambios' : 'Crear búsqueda'}</button>{editingId && <button type="button" className="secondary" onClick={() => { setEditingId(null); setForm(emptyProfile); setIncludeKeywordsText(''); setExcludeKeywordsText(''); }}>Cancelar</button>}</div>
+          <div className="actions"><button disabled={loading}>{editingId ? 'Guardar cambios' : 'Crear búsqueda'}</button>{editingId && <button type="button" className="secondary" onClick={() => { setEditingId(null); setForm(emptyProfile); }}>Cancelar</button>}</div>
         </form>
       </section>
 

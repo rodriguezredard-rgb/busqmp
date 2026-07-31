@@ -46,6 +46,15 @@ label { display: grid; gap: 7px; font-size: 14px; font-weight: 650; color: var(-
 small { color: var(--muted); }
 input, select { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--forest); background: white; outline: none; transition: border-color .18s, box-shadow .18s; }
 input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px #12949024; }
+.keyword-tag-input { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-height: 46px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 9px; background: white; cursor: text; transition: border-color .18s, box-shadow .18s; }
+.keyword-tag-input:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px #12949024; }
+.keyword-tag-input input { flex: 1 1 180px; width: auto; min-width: 140px; padding: 4px; border: 0; box-shadow: none; }
+.keyword-tag-input input:focus { box-shadow: none; }
+.keyword-tag { display: inline-flex; align-items: center; gap: 7px; width: auto; padding: 6px 9px; border-radius: 999px; color: white; background: var(--teal); font-size: 13px; }
+.keyword-tag b { font-size: 16px; line-height: 12px; }
+.keyword-tag:hover:not(:disabled) { background: var(--forest); transform: none; }
+.keyword-tag-input.exclude .keyword-tag { background: var(--magenta); }
+.keyword-tag-input.exclude .keyword-tag:hover:not(:disabled) { background: #a80f6a; }
 .check { display: flex; grid-template-columns: auto 1fr; align-items: center; }
 .check input { width: auto; accent-color: var(--teal); }
 .category-picker { margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
