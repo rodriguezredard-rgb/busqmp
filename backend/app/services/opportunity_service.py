@@ -12,6 +12,14 @@ def _datetime(value):
     return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
 
+def _keyword_pattern(keyword: str) -> str:
+    """Convierte * en comodín y escapa los comodines propios de SQL."""
+    escaped = (keyword.replace("\\", "\\\\")
+               .replace("%", "\\%")
+               .replace("_", "\\_"))
+    return f"%{escaped.replace('*', '%')}%"
+
+
 def _licitacion_dict(row):
     return {
         "id": f"licitacion:{row.codigo}", "source": "mercado_publico",
@@ -224,17 +232,17 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
     db = SessionLocal()
     try:
         results = []
-        pattern = f"%{keyword}%"
+        pattern = _keyword_pattern(keyword)
         if opportunity_type in ("all", "licitacion"):
             query = db.query(LicitacionActiva).filter(LicitacionActiva.activa.is_(True))
-            if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern))
+            if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(LicitacionActiva.region.ilike(f"%{region}%"))
             if organization: query = query.filter(LicitacionActiva.organismo.ilike(f"%{organization}%"))
             if status: query = query.filter(LicitacionActiva.estado.ilike(f"%{status}%"))
             results.extend(_licitacion_dict(row) for row in query.order_by(LicitacionActiva.fecha_cierre.asc()).limit(limit + offset).all())
         if opportunity_type in ("all", "compra_agil"):
             query = db.query(CompraAgil)
-            if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern))
+            if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(CompraAgil.region.ilike(f"%{region}%"))
             if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))
             if status:
@@ -256,17 +264,17 @@ def count_opportunities(keyword="", opportunity_type="all", region="", organizat
     db = SessionLocal()
     try:
         total = 0
-        pattern = f"%{keyword}%"
+        pattern = _keyword_pattern(keyword)
         if opportunity_type in ("all", "licitacion"):
             query = db.query(LicitacionActiva).filter(LicitacionActiva.activa.is_(True))
-            if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern))
+            if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(LicitacionActiva.region.ilike(f"%{region}%"))
             if organization: query = query.filter(LicitacionActiva.organismo.ilike(f"%{organization}%"))
             if status: query = query.filter(LicitacionActiva.estado.ilike(f"%{status}%"))
             total += query.count()
         if opportunity_type in ("all", "compra_agil"):
             query = db.query(CompraAgil)
-            if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern))
+            if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(CompraAgil.region.ilike(f"%{region}%"))
             if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))
             if status:

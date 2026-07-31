@@ -1,4 +1,5 @@
 import json
+import re
 import smtplib
 from datetime import datetime
 from email.message import EmailMessage
@@ -9,9 +10,20 @@ from app.models.search_profile import SearchProfile
 from app.services.opportunity_service import list_opportunities
 
 
+def matches_text_pattern(pattern: str, text: str) -> bool:
+    if "*" not in pattern:
+        return pattern.lower() in text.lower()
+    expression = re.escape(pattern).replace(r"\*", r"\w*")
+    if pattern[:1].isalnum():
+        expression = rf"(?<!\w){expression}"
+    if pattern[-1:].isalnum():
+        expression = rf"{expression}(?!\w)"
+    return re.search(expression, text, flags=re.IGNORECASE) is not None
+
+
 def matching_opportunities(profile: SearchProfile, limit: int = 100):
     included = json.loads(profile.include_keywords or "[]") or [""]
-    excluded = [word.lower() for word in json.loads(profile.exclude_keywords or "[]")]
+    excluded = json.loads(profile.exclude_keywords or "[]")
     selected_categories = set(json.loads(profile.selected_categories or "[]"))
     rows = []
     for keyword in included:
@@ -34,7 +46,8 @@ def matching_opportunities(profile: SearchProfile, limit: int = 100):
 
     return [row for row in unique.values()
             if matches_category(row)
-            and not any(word in f"{row['title']} {row.get('description', '')}".lower() for word in excluded)][:limit]
+            and not any(matches_text_pattern(word, f"{row['title']} {row.get('description', '')}")
+                        for word in excluded)][:limit]
 
 
 def send_digest(profile: SearchProfile, rows: list[dict]):

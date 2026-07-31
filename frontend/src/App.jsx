@@ -163,8 +163,8 @@ export default function App() {
         <form onSubmit={saveProfile} className="grid">
           <label>Nombre del perfil<input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej. Servicios eléctricos" /></label>
           <label>Rubro<input required value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Ej. Electricidad industrial" /></label>
-          <label className="wide">Palabras que debe buscar<input value={form.include_keywords.join(', ')} onChange={(e) => set('include_keywords', words(e.target.value))} placeholder="tableros eléctricos, cableado, mantención" /><small>Sepáralas con comas.</small></label>
-          <label className="wide">Palabras que debe excluir<input value={form.exclude_keywords.join(', ')} onChange={(e) => set('exclude_keywords', words(e.target.value))} placeholder="arriendo, usado" /></label>
+          <label className="wide">Palabras que debe buscar<input value={form.include_keywords.join(', ')} onChange={(e) => set('include_keywords', words(e.target.value))} placeholder="vet*, cableado, mantención" /><small>Sepáralas con comas. Usa * para incluir variantes con el mismo inicio: vet* encuentra veterinaria, veterinario y veterinarios.</small></label>
+          <label className="wide">Palabras que debe excluir<input value={form.exclude_keywords.join(', ')} onChange={(e) => set('exclude_keywords', words(e.target.value))} placeholder="arriend*, usado" /><small>También puedes usar * para excluir todas las variantes de una palabra.</small></label>
           <CategoryPicker categories={categories} selected={form.selected_categories} search={categorySearch} onSearch={setCategorySearch} toggle={toggleCategory} />
           <label>Tipo<select value={form.opportunity_type} onChange={(e) => set('opportunity_type', e.target.value)}><option value="all">Todas</option><option value="licitacion">Licitación</option><option value="compra_agil">Compra ágil</option></select></label>
           <label>Región<input value={form.region} onChange={(e) => set('region', e.target.value)} /></label>
