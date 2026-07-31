@@ -21,14 +21,27 @@ def _keyword_pattern(keyword: str) -> str:
 
 
 def _licitacion_dict(row):
+    detail = row.source_detail or {}
+    buyer = detail.get("Comprador") or {}
+    dates = detail.get("Fechas") or {}
+    organization = row.organismo or str(buyer.get("NombreOrganismo") or buyer.get("NombreUnidad") or "")
+    region = row.region or str(buyer.get("RegionUnidad") or buyer.get("RegionOrganismo") or "")
+    description = row.descripcion or str(detail.get("Descripcion") or "")
+    publish_date = row.fecha_publicacion or _datetime(dates.get("FechaPublicacion") or detail.get("FechaPublicacion"))
+    closing_date = row.fecha_cierre or _datetime(dates.get("FechaCierre") or detail.get("FechaCierre"))
+    raw_amount = detail.get("MontoEstimado")
+    try:
+        amount = float(raw_amount) if raw_amount not in (None, "") else None
+    except (TypeError, ValueError):
+        amount = None
     return {
         "id": f"licitacion:{row.codigo}", "source": "mercado_publico",
         "opportunity_type": "licitacion", "external_id": row.codigo,
-        "title": row.nombre, "description": row.descripcion,
-        "organization": row.organismo, "category": "", "category_codes": json.loads(row.category_codes or "[]"), "amount": None,
-        "currency": "CLP", "publish_date": row.fecha_publicacion,
-        "award_date": None, "closing_date": row.fecha_cierre,
-        "status": row.estado, "region": row.region,
+        "title": row.nombre, "description": description,
+        "organization": organization, "category": "", "category_codes": json.loads(row.category_codes or "[]"), "amount": amount,
+        "currency": str(detail.get("Moneda") or "CLP"), "publish_date": publish_date,
+        "award_date": None, "closing_date": closing_date,
+        "status": row.estado, "region": region,
         "url": f"https://www.mercadopublico.cl/Procurement/Modules/RFB/DetailsAcquisition.aspx?idlicitacion={row.codigo}",
     }
 

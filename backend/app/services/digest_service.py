@@ -21,6 +21,22 @@ def matches_text_pattern(pattern: str, text: str) -> bool:
     return re.search(expression, text, flags=re.IGNORECASE) is not None
 
 
+def format_date(value, timezone: str) -> str:
+    if not value:
+        return "No informada"
+    parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo:
+        parsed = parsed.astimezone(ZoneInfo(timezone))
+    return parsed.strftime("%d-%m-%Y %H:%M")
+
+
+def format_amount(value, currency: str) -> str:
+    if value is None:
+        return "No informado"
+    formatted = f"{float(value):,.0f}".replace(",", ".")
+    return f"$ {formatted} {currency or 'CLP'}"
+
+
 def matching_opportunities(profile: SearchProfile, limit: int = 100):
     included = json.loads(profile.include_keywords or "[]") or [""]
     excluded = json.loads(profile.exclude_keywords or "[]")
@@ -57,8 +73,19 @@ def send_digest(profile: SearchProfile, rows: list[dict]):
     if not rows:
         lines.append("Hoy no se encontraron oportunidades que coincidan con tu búsqueda.")
     for row in rows:
-        lines.extend([f"• {row['title']}", f"  {row.get('organization') or 'Sin organismo'}",
-                      f"  {row.get('url') or row['external_id']}", ""])
+        amount_label = "Monto estimado" if row.get("opportunity_type") == "licitacion" else "Monto disponible"
+        type_label = "Licitación" if row.get("opportunity_type") == "licitacion" else "Compra Ágil"
+        lines.extend([
+            f"• {row['title']}",
+            f"  Tipo: {type_label}",
+            f"  Código: {row.get('external_id') or 'No informado'}",
+            f"  Organismo: {row.get('organization') or 'No informado'}",
+            f"  Publicación: {format_date(row.get('publish_date'), profile.timezone)}",
+            f"  Cierre: {format_date(row.get('closing_date'), profile.timezone)}",
+            f"  {amount_label}: {format_amount(row.get('amount'), row.get('currency'))}",
+            f"  Enlace: {row.get('url') or 'No informado'}",
+            "",
+        ])
     message = EmailMessage()
     message["Subject"] = f"{len(rows)} oportunidades — {profile.name}"
     message["From"], message["To"] = SMTP_FROM, profile.recipient_email
