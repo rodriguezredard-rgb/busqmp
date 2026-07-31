@@ -22,8 +22,18 @@ def matching_opportunities(profile: SearchProfile, limit: int = 100):
             limit=limit,
         ))
     unique = {row["id"]: row for row in rows}
+    def matches_category(row):
+        if not selected_categories:
+            return True
+        row_codes = [str(code) for code in row.get("category_codes") or []]
+        return any(
+            any(code.startswith(selected[:-1]) for code in row_codes)
+            if selected.endswith("*") else selected in row_codes
+            for selected in selected_categories
+        )
+
     return [row for row in unique.values()
-            if (not selected_categories or selected_categories.intersection(row.get("category_codes") or []))
+            if matches_category(row)
             and not any(word in f"{row['title']} {row.get('description', '')}".lower() for word in excluded)][:limit]
 
 

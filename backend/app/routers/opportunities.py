@@ -5,7 +5,7 @@ router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 
 
 @router.get("/categories")
-def get_categories(search: str = "", limit: int = Query(200, ge=1, le=500)):
+def get_categories(search: str = "", limit: int = Query(200, ge=1, le=5000)):
     return list_categories(search, limit)
 
 
