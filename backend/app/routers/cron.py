@@ -72,8 +72,30 @@ def enrich_categories(
         raise HTTPException(503, "MERCADO_PUBLICO_TICKET no está configurado")
     service = MarketSourcesService(API_TICKET)
     results = []
+    errors = []
     for code in list_unenriched_codes(source, limit):
-        detail = (service.fetch_licitacion_detail(code) if source == "licitacion"
-                  else service.fetch_compra_agil_detail(code))
-        results.append({"code": code, "categories": save_opportunity_categories(code, detail, source)})
-    return {"source": source, "processed": len(results), "results": results}
+        try:
+            detail = (service.fetch_licitacion_detail(code) if source == "licitacion"
+                      else service.fetch_compra_agil_detail(code))
+            results.append({
+                "code": code,
+                "categories": save_opportunity_categories(code, detail, source),
+            })
+        except Exception as exc:
+            # Una ficha defectuosa o una falla temporal de Mercado Publico no
+            # debe abortar el lote completo. No devolvemos el mensaje/URL de
+            # la excepcion porque la API de licitaciones lleva el ticket en la URL.
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            errors.append({
+                "code": code,
+                "status": status_code,
+                "error": type(exc).__name__,
+            })
+    return {
+        "source": source,
+        "attempted": len(results) + len(errors),
+        "processed": len(results),
+        "failed": len(errors),
+        "errors": errors,
+        "results": results,
+    }

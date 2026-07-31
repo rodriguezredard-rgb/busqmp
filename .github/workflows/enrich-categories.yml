@@ -36,9 +36,19 @@ jobs:
           fi
           for current_source in $sources; do
             for batch in $(seq 1 "$BATCHES"); do
-              curl --silent --show-error --fail-with-body --location --max-time 240 \
+              response=$(curl --silent --show-error --fail-with-body --location --max-time 240 \
                 -X POST "$BACKEND_URL/cron/enrich-categories?source=$current_source&limit=5" \
-                -H "Authorization: Bearer $CRON_SECRET"
-              echo
+                -H "Authorization: Bearer $CRON_SECRET")
+              echo "$response"
+              attempted=$(echo "$response" | jq -r '.attempted // 0')
+              processed=$(echo "$response" | jq -r '.processed // 0')
+              if [ "$attempted" -eq 0 ]; then
+                echo "No quedan oportunidades pendientes para $current_source."
+                break
+              fi
+              if [ "$processed" -eq 0 ]; then
+                echo "El lote completo fallo; se detiene $current_source para evitar reintentos repetidos."
+                break
+              fi
             done
           done
