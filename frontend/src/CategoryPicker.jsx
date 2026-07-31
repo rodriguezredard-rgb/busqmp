@@ -31,12 +31,12 @@ const SEGMENT_NAMES = {
   94: 'Organizaciones y asociaciones', 95: 'Terrenos, edificios y estructuras',
 };
 
-const LEVELS = { 2: 'Rubro general', 4: 'Familia', 6: 'Clase', 8: 'Producto específico' };
+const LEVELS = { 2: 'Rubro', 4: 'Familia', 6: 'Clase', 8: 'Producto específico' };
 const tokenFor = (prefix) => `${prefix}*`;
 const prefixOf = (value) => value.endsWith('*') ? value.slice(0, -1) : value;
 
 function branchLabel(prefix) {
-  if (prefix.length === 2) return SEGMENT_NAMES[prefix] || `Rubro general ${prefix}`;
+  if (prefix.length === 2) return SEGMENT_NAMES[prefix] || `Rubro ${prefix}`;
   return `${LEVELS[prefix.length]} ${prefix}`;
 }
 
@@ -62,7 +62,7 @@ function makeTree(categories) {
 }
 
 function categoryLevel(code) {
-  if (code.endsWith('000000')) return 'Rubro general';
+  if (code.endsWith('000000')) return 'Rubro';
   if (code.endsWith('0000')) return 'Familia';
   if (code.endsWith('00')) return 'Clase';
   return 'Producto específico';
@@ -86,7 +86,8 @@ function treeBranchName(tree, prefix) {
 function SelectButton({ prefix, selected, toggle }) {
   const token = tokenFor(prefix);
   const active = selected.includes(token);
-  return <button type="button" className={`branch-select${active ? ' selected' : ''}`} onClick={() => toggle(token)}>{active ? 'Seleccionado' : 'Seleccionar todo'}</button>;
+  const level = (LEVELS[prefix.length] || 'Categoría').toLowerCase();
+  return <button type="button" className={`branch-select${active ? ' selected' : ''}`} onClick={() => toggle(token)}>{active ? `✓ ${level} agregado` : `+ Agregar ${level}`}</button>;
 }
 
 export default function CategoryPicker({ categories, selected, search, onSearch, toggle }) {
@@ -110,9 +111,9 @@ export default function CategoryPicker({ categories, selected, search, onSearch,
       {matches.map((category) => { const code = String(category.code); const value = selectionValue(code); const active = selected.includes(value); const path = category.name.split('/').map((part) => part.trim()); return <button key={category.code} type="button" className={`category-tag${active ? ' selected' : ''}`} onClick={() => toggle(value)}><span>{path.at(-1)}</span><small>{categoryLevel(code)} · {path.length > 1 ? path.join(' › ') : `${code.slice(0, 2)} › ${code.slice(0, 4)} › ${code.slice(0, 6)} › ${code}`}</small></button>; })}
       {!matches.length && <p>No se encontraron rubros con ese nombre o código.</p>}
     </div> : <div className="category-tree">
-      {[...tree].map(([segmentCode, segment]) => <details key={segmentCode} className="tree-segment"><summary><span><small>Rubro general</small>{segment.name || branchLabel(segmentCode)} <b>{[...segment.families.values()].reduce((sum, family) => sum + [...family.classes.values()].reduce((count, classItem) => count + Math.max(classItem.products.length, 1), 0), 0)}</b></span></summary><div className="tree-branch"><SelectButton prefix={segmentCode} selected={selected} toggle={toggle} />{[...segment.families].map(([familyCode, family]) => <details key={familyCode}><summary><span><small>Familia</small>{family.name || branchLabel(familyCode)}</span></summary><div className="tree-branch"><SelectButton prefix={familyCode} selected={selected} toggle={toggle} />{[...family.classes].map(([classCode, classItem]) => <details key={classCode}><summary><span><small>Clase</small>{classItem.name || branchLabel(classCode)} <b>{classItem.products.length}</b></span></summary><div className="tree-products"><SelectButton prefix={classCode} selected={selected} toggle={toggle} />{classItem.products.map((product) => <button key={product.code} type="button" className={`category-tag${selected.includes(product.code) ? ' selected' : ''}`} onClick={() => toggle(product.code)}><span>{product.name}</span><small>Producto específico · {product.code}</small></button>)}</div></details>)}</div></details>)}</div></details>)}
+      {[...tree].map(([segmentCode, segment]) => <details key={segmentCode} className="tree-segment"><summary><span><small>Rubro</small>{segment.name || branchLabel(segmentCode)} <b>{[...segment.families.values()].reduce((sum, family) => sum + [...family.classes.values()].reduce((count, classItem) => count + Math.max(classItem.products.length, 1), 0), 0)}</b></span></summary><div className="tree-branch"><SelectButton prefix={segmentCode} selected={selected} toggle={toggle} />{[...segment.families].map(([familyCode, family]) => <details key={familyCode}><summary><span><small>Familia</small>{family.name || branchLabel(familyCode)}</span></summary><div className="tree-branch"><SelectButton prefix={familyCode} selected={selected} toggle={toggle} />{[...family.classes].map(([classCode, classItem]) => <details key={classCode}><summary><span><small>Clase</small>{classItem.name || branchLabel(classCode)} <b>{classItem.products.length}</b></span></summary><div className="tree-products"><SelectButton prefix={classCode} selected={selected} toggle={toggle} />{classItem.products.map((product) => <button key={product.code} type="button" className={`category-tag${selected.includes(product.code) ? ' selected' : ''}`} onClick={() => toggle(product.code)}><span>{product.name}</span><small>Producto específico · {product.code}</small></button>)}</div></details>)}</div></details>)}</div></details>)}
       {!categories.length && <p>Aún no hay rubros catalogados. El enriquecimiento continúa automáticamente.</p>}
     </div>}
-    <small>{selected.length} selecciones · Una selección general incluye todos los niveles inferiores.</small>
+    <small>{selected.length} tags agregados · Un tag de rubro, familia o clase incluye sus niveles inferiores.</small>
   </fieldset>;
 }
