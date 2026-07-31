@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Query, Response
-from app.services.opportunity_service import count_opportunities, list_opportunities
+from app.services.opportunity_service import count_opportunities, list_categories, list_opportunities
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
+
+
+@router.get("/categories")
+def get_categories(search: str = "", limit: int = Query(200, ge=1, le=500)):
+    return list_categories(search, limit)
 
 
 @router.get("")

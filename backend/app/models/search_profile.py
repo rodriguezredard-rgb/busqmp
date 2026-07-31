@@ -10,6 +10,7 @@ class SearchProfile(Base):
     industry = Column(String(250), nullable=False, default="")
     include_keywords = Column(Text, nullable=False, default="[]")
     exclude_keywords = Column(Text, nullable=False, default="[]")
+    selected_categories = Column(Text, nullable=False, default="[]")
     opportunity_type = Column(String(50), nullable=False, default="all")
     region = Column(String(200), nullable=False, default="")
     organization = Column(String(500), nullable=False, default="")

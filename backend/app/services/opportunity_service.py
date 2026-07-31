@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from app.models.database import SessionLocal, initialize_database
-from app.models.market_data import CompraAgil, LicitacionActiva
+import json
+from app.models.market_data import CompraAgil, LicitacionActiva, OpportunityCategory
 
 
 def _datetime(value):
@@ -16,7 +17,7 @@ def _licitacion_dict(row):
         "id": f"licitacion:{row.codigo}", "source": "mercado_publico",
         "opportunity_type": "licitacion", "external_id": row.codigo,
         "title": row.nombre, "description": row.descripcion,
-        "organization": row.organismo, "category": "", "amount": None,
+        "organization": row.organismo, "category": "", "category_codes": json.loads(row.category_codes or "[]"), "amount": None,
         "currency": "CLP", "publish_date": row.fecha_publicacion,
         "award_date": None, "closing_date": row.fecha_cierre,
         "status": row.estado, "region": row.region,
@@ -29,7 +30,7 @@ def _agile_dict(row):
         "id": f"compra_agil:{row.codigo}", "source": "compras_agiles",
         "opportunity_type": "compra_agil", "external_id": row.codigo,
         "title": row.nombre, "description": row.descripcion,
-        "organization": row.organismo, "category": "", "amount": float(row.monto) if row.monto is not None else None,
+        "organization": row.organismo, "category": "", "category_codes": json.loads(row.category_codes or "[]"), "amount": float(row.monto) if row.monto is not None else None,
         "currency": row.moneda, "publish_date": row.fecha_publicacion,
         "award_date": None, "closing_date": row.fecha_cierre,
         "status": row.estado, "region": row.region,
@@ -92,6 +93,81 @@ def save_compras_agiles(items: list[dict]) -> int:
 
 def save_compra_agil(data: dict) -> None:
     save_compras_agiles([data])
+
+
+def _category_pairs(detail: dict, source: str) -> list[tuple[str, str]]:
+    pairs = []
+    if source == "licitacion":
+        item_container = detail.get("Items") or {}
+        items = item_container.get("Listado") or [] if isinstance(item_container, dict) else []
+        for item in items:
+            code = str(item.get("CodigoCategoria") or item.get("CodigoProducto") or "").strip()
+            name = str(item.get("Categoria") or item.get("NombreProducto") or "").strip()
+            if code and name:
+                pairs.append((code, name))
+    else:
+        for item in detail.get("productos_solicitados") or []:
+            code = str(item.get("codigo_producto") or "").strip()
+            name = str(item.get("nombre") or item.get("descripcion") or "").strip()
+            if code and name:
+                pairs.append((code, name))
+    return list(dict.fromkeys(pairs))
+
+
+def save_opportunity_categories(code: str, detail: dict, source: str) -> int:
+    initialize_database()
+    pairs = _category_pairs(detail, source)
+    if not pairs:
+        return 0
+    db = SessionLocal()
+    try:
+        model = LicitacionActiva if source == "licitacion" else CompraAgil
+        row = db.get(model, code)
+        if not row:
+            return 0
+        row.category_codes = json.dumps([item[0] for item in pairs], ensure_ascii=False)
+        row.category_names = json.dumps([item[1] for item in pairs], ensure_ascii=False)
+        row.source_detail = detail
+        now = datetime.now(timezone.utc)
+        for category_code, category_name in pairs:
+            category = db.get(OpportunityCategory, category_code)
+            if category:
+                category.name, category.updated_at = category_name, now
+            else:
+                db.add(OpportunityCategory(code=category_code, name=category_name, source=source, updated_at=now))
+        db.commit()
+        return len(pairs)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def list_categories(search: str = "", limit: int = 200):
+    initialize_database()
+    db = SessionLocal()
+    try:
+        query = db.query(OpportunityCategory)
+        if search:
+            query = query.filter(OpportunityCategory.name.ilike(f"%{search}%"))
+        return [{"code": row.code, "name": row.name, "source": row.source}
+                for row in query.order_by(OpportunityCategory.name).limit(limit).all()]
+    finally:
+        db.close()
+
+
+def list_unenriched_codes(source: str, limit: int = 5) -> list[str]:
+    initialize_database()
+    db = SessionLocal()
+    try:
+        model = LicitacionActiva if source == "licitacion" else CompraAgil
+        query = db.query(model).filter(model.category_codes == "[]")
+        if source == "licitacion":
+            query = query.filter(LicitacionActiva.activa.is_(True))
+        return [row.codigo for row in query.limit(limit).all()]
+    finally:
+        db.close()
 
 
 def sync_active_licitaciones(items: list[dict]) -> int:

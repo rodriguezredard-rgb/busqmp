@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const emptyProfile = {
   name: '', industry: '', include_keywords: [], exclude_keywords: [],
+  selected_categories: [],
   opportunity_type: 'all', region: '', organization: '', status: '',
   minimum_amount: null, maximum_amount: null, recipient_email: '',
   delivery_time: '09:00', timezone: 'America/Santiago', enabled: true,
@@ -16,6 +17,8 @@ export default function App() {
   const [activeModule, setActiveModule] = useState('licitacion');
   const [items, setItems] = useState([]);
   const [profiles, setProfiles] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [categorySearch, setCategorySearch] = useState('');
   const [form, setForm] = useState(emptyProfile);
   const [editingId, setEditingId] = useState(null);
   const [keyword, setKeyword] = useState('');
@@ -32,6 +35,12 @@ export default function App() {
     const response = await fetch(`${API}/profiles`);
     if (!response.ok) throw new Error('No se pudieron cargar los perfiles');
     setProfiles(await response.json());
+  }
+
+  async function loadCategories() {
+    const response = await fetch(`${API}/opportunities/categories?limit=500`);
+    if (!response.ok) throw new Error('No se pudieron cargar los rubros');
+    setCategories(await response.json());
   }
 
   async function search(event, requestedPage = 0, requestedModule = activeModule) {
@@ -73,7 +82,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    Promise.all([loadProfiles(), search(null, 0, 'licitacion')]).catch((error) => setMessage(error.message));
+    Promise.all([loadProfiles(), loadCategories(), search(null, 0, 'licitacion')]).catch((error) => setMessage(error.message));
   }, []);
 
   async function saveProfile(event) {
@@ -111,6 +120,10 @@ export default function App() {
 
   const set = (field, value) => setForm((old) => ({ ...old, [field]: value }));
   const setSearch = (field, value) => setSearchFilters((old) => ({ ...old, [field]: value }));
+  const toggleCategory = (code) => set('selected_categories', form.selected_categories.includes(code)
+    ? form.selected_categories.filter((item) => item !== code)
+    : [...form.selected_categories, code]);
+  const visibleCategories = categories.filter((item) => `${item.code} ${item.name}`.toLowerCase().includes(categorySearch.toLowerCase()));
 
   return <div className="app-shell">
     <aside className="sidebar">
@@ -152,6 +165,7 @@ export default function App() {
           <label>Rubro<input required value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Ej. Electricidad industrial" /></label>
           <label className="wide">Palabras que debe buscar<input value={form.include_keywords.join(', ')} onChange={(e) => set('include_keywords', words(e.target.value))} placeholder="tableros eléctricos, cableado, mantención" /><small>Sepáralas con comas.</small></label>
           <label className="wide">Palabras que debe excluir<input value={form.exclude_keywords.join(', ')} onChange={(e) => set('exclude_keywords', words(e.target.value))} placeholder="arriendo, usado" /></label>
+          <fieldset className="category-picker wide"><legend>Rubros de Mercado Público</legend><input value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} placeholder="Buscar por nombre o código ONU" /><div className="category-options">{visibleCategories.map((category) => <label key={category.code}><input type="checkbox" checked={form.selected_categories.includes(category.code)} onChange={() => toggleCategory(category.code)} /><span>{category.name}<small>{category.code}</small></span></label>)}{!visibleCategories.length && <p>Aún no hay rubros catalogados. Ejecuta el enriquecimiento inicial.</p>}</div><small>{form.selected_categories.length} rubros seleccionados</small></fieldset>
           <label>Tipo<select value={form.opportunity_type} onChange={(e) => set('opportunity_type', e.target.value)}><option value="all">Todas</option><option value="licitacion">Licitación</option><option value="compra_agil">Compra ágil</option></select></label>
           <label>Región<input value={form.region} onChange={(e) => set('region', e.target.value)} /></label>
           <label>Organismo<input value={form.organization} onChange={(e) => set('organization', e.target.value)} /></label>
@@ -166,7 +180,7 @@ export default function App() {
       </section>
 
       <section className="panel"><h2>Mis búsquedas programadas</h2><div className="profiles">
-        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p><span className="profile-industry">{profile.industry}</span> · {profile.delivery_time} · {profile.recipient_email}</p><small><b>Incluye:</b> {profile.include_keywords.join(', ') || 'Todas'} · <b>Excluye:</b> {profile.exclude_keywords.join(', ') || 'Ninguna'} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
+        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p><span className="profile-industry">{profile.industry}</span> · {profile.delivery_time} · {profile.recipient_email}</p><small><b>Incluye:</b> {profile.include_keywords.join(', ') || 'Todas'} · <b>Excluye:</b> {profile.exclude_keywords.join(', ') || 'Ninguna'} · <b>Rubros:</b> {profile.selected_categories?.length || 0} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
         {!profiles.length && <p>Aún no tienes búsquedas programadas.</p>}
       </div></section>
       </>}

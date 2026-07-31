@@ -34,6 +34,8 @@ class LicitacionActiva(Base):
     activa = Column(Boolean, nullable=False, default=True, index=True)
     search_text = Column(Text, nullable=False, default="", index=True)
     source_detail = Column(JSON, nullable=False, default=dict)
+    category_codes = Column(Text, nullable=False, default="[]")
+    category_names = Column(Text, nullable=False, default="[]")
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -58,4 +60,15 @@ class CompraAgil(Base):
     fecha_ultimo_cambio = Column(DateTime(timezone=True), nullable=True, index=True)
     search_text = Column(Text, nullable=False, default="", index=True)
     source_detail = Column(JSON, nullable=False, default=dict)
+    category_codes = Column(Text, nullable=False, default="[]")
+    category_names = Column(Text, nullable=False, default="[]")
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class OpportunityCategory(Base):
+    __tablename__ = "busqmp_categories"
+
+    code = Column(String(30), primary_key=True)
+    name = Column(Text, nullable=False)
+    source = Column(String(30), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)

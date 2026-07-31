@@ -3,7 +3,10 @@ from app.core.config import API_TICKET, CRON_SECRET
 from app.models.database import SessionLocal, initialize_database
 from app.services.digest_service import run_due_digests
 from app.services.market_sources import MarketSourcesService
-from app.services.opportunity_service import save_compra_agil, save_compras_agiles, sync_active_licitaciones
+from app.services.opportunity_service import (
+    list_unenriched_codes, save_compra_agil, save_compras_agiles,
+    save_opportunity_categories, sync_active_licitaciones,
+)
 
 router = APIRouter(prefix="/cron", tags=["cron"])
 
@@ -55,3 +58,22 @@ def agile_backfill_page(
         "total_pages": int(pagination.get("total_paginas") or 0),
         "total_results": int(pagination.get("total_resultados") or 0),
     }
+
+
+@router.post("/enrich-categories")
+def enrich_categories(
+    source: str = Query("licitacion", pattern="^(licitacion|compra_agil)$"),
+    limit: int = Query(5, ge=1, le=20),
+    authorization: str | None = Header(default=None),
+):
+    if not CRON_SECRET or authorization != f"Bearer {CRON_SECRET}":
+        raise HTTPException(401, "No autorizado")
+    if not API_TICKET:
+        raise HTTPException(503, "MERCADO_PUBLICO_TICKET no está configurado")
+    service = MarketSourcesService(API_TICKET)
+    results = []
+    for code in list_unenriched_codes(source, limit):
+        detail = (service.fetch_licitacion_detail(code) if source == "licitacion"
+                  else service.fetch_compra_agil_detail(code))
+        results.append({"code": code, "categories": save_opportunity_categories(code, detail, source)})
+    return {"source": source, "processed": len(results), "results": results}

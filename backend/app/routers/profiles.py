@@ -14,6 +14,7 @@ class ProfilePayload(BaseModel):
     industry: str = ""
     include_keywords: list[str] = []
     exclude_keywords: list[str] = []
+    selected_categories: list[str] = []
     opportunity_type: str = "all"
     region: str = ""
     organization: str = ""
@@ -40,6 +41,7 @@ def serialize(row: SearchProfile) -> dict:
         "id": row.id, "name": row.name, "industry": row.industry,
         "include_keywords": json.loads(row.include_keywords or "[]"),
         "exclude_keywords": json.loads(row.exclude_keywords or "[]"),
+        "selected_categories": json.loads(row.selected_categories or "[]"),
         "opportunity_type": row.opportunity_type, "region": row.region,
         "organization": row.organization, "status": row.status,
         "minimum_amount": row.minimum_amount, "maximum_amount": row.maximum_amount,
@@ -53,6 +55,7 @@ def values(payload: ProfilePayload) -> dict:
     data = payload.model_dump()
     data["include_keywords"] = json.dumps([x.strip() for x in payload.include_keywords if x.strip()], ensure_ascii=False)
     data["exclude_keywords"] = json.dumps([x.strip() for x in payload.exclude_keywords if x.strip()], ensure_ascii=False)
+    data["selected_categories"] = json.dumps([x.strip() for x in payload.selected_categories if x.strip()], ensure_ascii=False)
     return data
 
 

@@ -1,0 +1,35 @@
+name: Enriquecer rubros
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Fuente: licitacion o compra_agil"
+        required: true
+        default: "licitacion"
+      batches:
+        description: "Cantidad de lotes de 5 oportunidades"
+        required: true
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Extraer categorias observadas
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SOURCE: ${{ inputs.source }}
+          BATCHES: ${{ inputs.batches }}
+        run: |
+          for batch in $(seq 1 "$BATCHES"); do
+            curl --silent --show-error --fail-with-body --location --max-time 240 \
+              -X POST "$BACKEND_URL/cron/enrich-categories?source=$SOURCE&limit=5" \
+              -H "Authorization: Bearer $CRON_SECRET"
+            echo
+          done

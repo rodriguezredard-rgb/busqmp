@@ -12,6 +12,7 @@ from app.services.opportunity_service import list_opportunities
 def matching_opportunities(profile: SearchProfile, limit: int = 100):
     included = json.loads(profile.include_keywords or "[]") or [""]
     excluded = [word.lower() for word in json.loads(profile.exclude_keywords or "[]")]
+    selected_categories = set(json.loads(profile.selected_categories or "[]"))
     rows = []
     for keyword in included:
         rows.extend(list_opportunities(
@@ -21,9 +22,9 @@ def matching_opportunities(profile: SearchProfile, limit: int = 100):
             limit=limit,
         ))
     unique = {row["id"]: row for row in rows}
-    return [row for row in unique.values() if not any(
-        word in f"{row['title']} {row.get('description', '')}".lower() for word in excluded
-    )][:limit]
+    return [row for row in unique.values()
+            if (not selected_categories or selected_categories.intersection(row.get("category_codes") or []))
+            and not any(word in f"{row['title']} {row.get('description', '')}".lower() for word in excluded)][:limit]
 
 
 def send_digest(profile: SearchProfile, rows: list[dict]):

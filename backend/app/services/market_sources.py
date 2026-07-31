@@ -72,6 +72,26 @@ class MarketSourcesService:
         payload = response.json() if response.content else {}
         return payload.get("Listado", []) if isinstance(payload, dict) else []
 
+    def fetch_licitacion_detail(self, code: str) -> dict:
+        response = requests.get(
+            "https://api.mercadopublico.cl/servicios/v1/publico/licitaciones.json",
+            params={"ticket": self.ticket, "codigo": code}, timeout=40,
+        )
+        response.raise_for_status()
+        items = (response.json() or {}).get("Listado") or []
+        return items[0] if items else {}
+
+    def fetch_compra_agil_detail(self, code: str) -> dict:
+        response = requests.get(
+            f"https://api2.mercadopublico.cl/v2/compra-agil/{code}",
+            headers={"ticket": self.ticket}, timeout=40,
+        )
+        response.raise_for_status()
+        data = response.json() or {}
+        if data.get("success") != "OK":
+            raise RuntimeError(str(data.get("errors") or "Detalle inválido de Compra Ágil"))
+        return data.get("payload") or {}
+
     def fetch_compra_agil(self, keyword: str = "", filters: dict | None = None,
                           minutes: int | None = None, page_size: int | None = None) -> list[dict]:
         if not self.ticket:
