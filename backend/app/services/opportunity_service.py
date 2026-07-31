@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy import or_
@@ -9,8 +10,14 @@ from app.models.market_data import CompraAgil, LicitacionActiva, OpportunityCate
 
 def _datetime(value):
     if not value or isinstance(value, datetime):
-        return value
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        parsed = value
+    else:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    # La API v1 de licitaciones entrega fechas sin offset, pero corresponden
+    # a la hora local chilena. Se normalizan antes de guardarlas en Supabase.
+    if parsed and parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=ZoneInfo("America/Santiago"))
+    return parsed
 
 
 def _keyword_pattern(keyword: str) -> str:
@@ -28,8 +35,10 @@ def _licitacion_dict(row):
     organization = row.organismo or str(buyer.get("NombreOrganismo") or buyer.get("NombreUnidad") or "")
     region = row.region or str(buyer.get("RegionUnidad") or buyer.get("RegionOrganismo") or "")
     description = row.descripcion or str(detail.get("Descripcion") or "")
-    publish_date = row.fecha_publicacion or _datetime(dates.get("FechaPublicacion") or detail.get("FechaPublicacion"))
-    closing_date = row.fecha_cierre or _datetime(dates.get("FechaCierre") or detail.get("FechaCierre"))
+    publish_date = (_datetime(dates.get("FechaPublicacion") or detail.get("FechaPublicacion"))
+                    or row.fecha_publicacion)
+    closing_date = (_datetime(dates.get("FechaCierre") or detail.get("FechaCierre"))
+                    or row.fecha_cierre)
     raw_amount = detail.get("MontoEstimado")
     try:
         amount = float(raw_amount) if raw_amount not in (None, "") else None
@@ -200,6 +209,8 @@ def list_unenriched_codes(source: str, limit: int = 5) -> list[str]:
                 model.organismo == "",
             ))
             query = query.filter(LicitacionActiva.activa.is_(True))
+        if source == "licitacion":
+            query = query.order_by(LicitacionActiva.fecha_cierre.asc())
         return [row.codigo for row in query.limit(limit).all()]
     finally:
         db.close()

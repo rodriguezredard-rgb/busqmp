@@ -12,7 +12,9 @@ const emptyProfile = {
 };
 
 function displayDate(value) {
-  return value ? new Date(value).toLocaleString('es-CL') : 'No informada';
+  return value ? new Date(value).toLocaleString('es-CL', {
+    timeZone: 'America/Santiago', dateStyle: 'short', timeStyle: 'short',
+  }) : 'No informada';
 }
 
 function displayAmount(item) {
