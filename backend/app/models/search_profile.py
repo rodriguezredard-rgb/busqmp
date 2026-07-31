@@ -6,6 +6,7 @@ class SearchProfile(Base):
     __tablename__ = "busqmp_search_profiles"
 
     id = Column(Integer, primary_key=True)
+    owner_id = Column(String(64), nullable=True, index=True)
     name = Column(String(150), nullable=False)
     industry = Column(String(250), nullable=False, default="")
     include_keywords = Column(Text, nullable=False, default="[]")

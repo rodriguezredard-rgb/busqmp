@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import CategoryPicker from './CategoryPicker';
 import KeywordTagInput from './KeywordTagInput';
+import Landing from './Landing';
+import { refreshSession, signOut, storedSession, updateCredentials } from './auth';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const emptyProfile = {
@@ -28,8 +30,11 @@ function displayAmount(item) {
   }
 }
 
-export default function App() {
+function Dashboard({ session, onSessionChange }) {
   const [activeModule, setActiveModule] = useState('licitacion');
+  const [settingsPage, setSettingsPage] = useState('menu');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('busqmp_theme') || 'system');
   const [items, setItems] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -44,10 +49,17 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const pageSize = 20;
   const isAgile = activeModule === 'compra_agil';
-  const isProfiles = activeModule === 'profiles';
+  const isSettings = activeModule === 'settings';
+  const isProfiles = isSettings && settingsPage === 'profiles';
+  const authHeaders = { Authorization: `Bearer ${session.access_token}` };
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('busqmp_theme', theme);
+  }, [theme]);
 
   async function loadProfiles() {
-    const response = await fetch(`${API}/profiles`);
+    const response = await fetch(`${API}/profiles`, { headers: authHeaders });
     if (!response.ok) throw new Error('No se pudieron cargar los perfiles');
     setProfiles(await response.json());
   }
@@ -86,11 +98,9 @@ export default function App() {
 
   function switchModule(module) {
     setActiveModule(module);
-    if (module === 'profiles') {
+    if (module === 'settings') {
+      setSettingsPage('menu');
       setMessage('');
-      const requests = [loadProfiles()];
-      if (!categories.length) requests.push(loadCategories());
-      Promise.all(requests).catch((error) => setMessage(error.message));
       return;
     }
     setItems([]);
@@ -111,7 +121,7 @@ export default function App() {
     try {
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(form),
       });
       if (!response.ok) throw new Error('Revisa el correo y los datos ingresados');
@@ -134,7 +144,7 @@ export default function App() {
 
   async function remove(id) {
     if (!window.confirm('¿Eliminar este perfil de búsqueda?')) return;
-    await fetch(`${API}/profiles/${id}`, { method: 'DELETE' });
+    await fetch(`${API}/profiles/${id}`, { method: 'DELETE', headers: authHeaders });
     await loadProfiles();
   }
 
@@ -144,22 +154,43 @@ export default function App() {
     ? form.selected_categories.filter((item) => item !== code)
     : [...form.selected_categories, code]);
 
-  return <div className="app-shell">
+  async function openSettings(pageName) {
+    setSettingsPage(pageName); setMessage('');
+    if (pageName === 'profiles') {
+      const requests = [loadProfiles()];
+      if (!categories.length) requests.push(loadCategories());
+      Promise.all(requests).catch((error) => setMessage(error.message));
+    }
+  }
+
+  async function changeCredentials(event) {
+    event.preventDefault(); setLoading(true); setMessage('');
+    const data = new FormData(event.currentTarget);
+    const values = {};
+    if (data.get('email')) values.email = data.get('email');
+    if (data.get('password')) values.password = data.get('password');
+    try { await updateCredentials(session.access_token, values); setMessage('Credenciales actualizadas. Revisa tu correo si cambiaste el email.'); event.currentTarget.reset(); }
+    catch (error) { setMessage(error.message); } finally { setLoading(false); }
+  }
+
+  async function logout() { await signOut(session.access_token); onSessionChange(null); }
+
+  return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
-      <div className="brand"><span>BO</span><div><strong>Oportunidades</strong><small>Mercado Público</small></div></div>
+      <div className="brand"><span>BO</span><div><strong>Oportunidades</strong><small>Mercado Público</small></div><button className="sidebar-toggle" aria-label={sidebarCollapsed ? 'Mostrar menú' : 'Ocultar menú'} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>{sidebarCollapsed ? '›' : '‹'}</button></div>
       <nav className="module-nav" aria-label="Módulos de oportunidades">
         <button className={activeModule === 'licitacion' ? 'active' : ''} onClick={() => switchModule('licitacion')}><span>L</span><div><strong>Licitaciones</strong><small>Procesos activos</small></div></button>
         <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>CA</span><div><strong>Compras Ágiles</strong><small>Oportunidades rápidas</small></div></button>
-        <button className={activeModule === 'profiles' ? 'active' : ''} onClick={() => switchModule('profiles')}><span>R</span><div><strong>Rubros guardados</strong><small>Palabras y exclusiones</small></div></button>
+        <button className={activeModule === 'settings' ? 'active' : ''} onClick={() => switchModule('settings')}><span>⚙</span><div><strong>Settings</strong><small>Cuenta y preferencias</small></div></button>
       </nav>
       <div className="sidebar-note"><span className="live-dot" aria-hidden="true" />Datos sincronizados automáticamente desde Mercado Público.</div>
     </aside>
 
     <main className="app">
-      <header className="page-header"><div><small className="eyebrow">Módulo</small><h1>{isProfiles ? 'Rubros guardados' : isAgile ? 'Compras Ágiles' : 'Licitaciones'}</h1><p>{isProfiles ? 'Configura palabras clave, exclusiones y alertas diarias.' : isAgile ? 'Explora oportunidades de compra rápida.' : 'Encuentra procesos activos para ofertar.'}</p></div>{!isProfiles && <span className="result-count"><strong>{total.toLocaleString('es-CL')}</strong> resultados</span>}</header>
+      <header className="page-header"><div><small className="eyebrow">{isSettings ? 'Configuración' : 'Módulo'}</small><h1>{isSettings ? settingsPage === 'profiles' ? 'Búsquedas programadas' : settingsPage === 'appearance' ? 'Apariencia' : settingsPage === 'account' ? 'Credenciales de acceso' : 'Settings' : isAgile ? 'Compras Ágiles' : 'Licitaciones'}</h1><p>{isSettings ? 'Administra tus búsquedas, apariencia y cuenta.' : isAgile ? 'Explora oportunidades de compra rápida.' : 'Encuentra procesos activos para ofertar.'}</p></div>{!isSettings && <span className="result-count"><strong>{total.toLocaleString('es-CL')}</strong> resultados</span>}</header>
       {message && <div className="notice" onClick={() => setMessage('')}>{message}</div>}
 
-      {!isProfiles && <>
+      {!isSettings && <>
       <section className="panel module-panel"><div className="section-heading"><div><h2>Buscar {isAgile ? 'compras ágiles' : 'licitaciones'}</h2><p>Filtra los registros guardados en la base de oportunidades.</p></div><span className="module-chip">{isAgile ? 'Compra Ágil' : 'Licitación'}</span></div>
         <form className="search-filters" onSubmit={(event) => search(event, 0)}>
           <label className="wide">Palabra clave<input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Ej. servicio, mantención, equipos" /></label>
@@ -180,6 +211,14 @@ export default function App() {
         {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => search(null, page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => search(null, page + 1)}>Siguiente</button></nav>}
       </section>
       </>}
+
+      {isSettings && settingsPage === 'menu' && <section className="settings-layer panel"><div className="settings-user"><span>{session.user?.email?.slice(0, 1).toUpperCase()}</span><div><strong>{session.user?.email}</strong><small>Cuenta activa</small></div></div><h2>Configurar</h2><div className="settings-menu"><button onClick={() => openSettings('profiles')}><span>⌕</span><div><strong>Búsquedas programadas</strong><small>Palabras, rubros y alertas por correo</small></div><b>›</b></button><button onClick={() => openSettings('appearance')}><span>◐</span><div><strong>Apariencia</strong><small>Modo claro, oscuro o del sistema</small></div><b>›</b></button><button onClick={() => openSettings('account')}><span>♙</span><div><strong>Credenciales de acceso</strong><small>Correo electrónico y contraseña</small></div><b>›</b></button></div><button className="logout-button" onClick={logout}>Cerrar sesión</button></section>}
+
+      {isSettings && settingsPage !== 'menu' && <button className="settings-back" onClick={() => setSettingsPage('menu')}>← Volver a Settings</button>}
+
+      {isSettings && settingsPage === 'appearance' && <section className="panel appearance-panel"><h2>Skin de la plataforma</h2><p className="panel-intro">Elige cómo quieres ver la interfaz en este dispositivo.</p><div className="theme-options">{[['light','Claro','Interfaz luminosa y limpia'],['dark','Oscuro','Menos brillo y mayor contraste'],['system','Sistema','Sigue la configuración del equipo']].map(([value,label,description]) => <button className={theme === value ? 'selected' : ''} key={value} onClick={() => setTheme(value)}><i className={`theme-preview ${value}`} /><span><strong>{label}</strong><small>{description}</small></span><b>{theme === value ? '✓' : ''}</b></button>)}</div></section>}
+
+      {isSettings && settingsPage === 'account' && <section className="panel account-panel"><h2>Credenciales de acceso</h2><p className="panel-intro">Actualiza el correo o define una nueva contraseña para tu cuenta.</p><form className="account-form" onSubmit={changeCredentials}><label>Nuevo correo electrónico<input type="email" name="email" placeholder={session.user?.email} /></label><label>Nueva contraseña<input type="password" name="password" minLength="6" autoComplete="new-password" placeholder="Mínimo 6 caracteres" /></label><div className="actions"><button disabled={loading}>Guardar cambios</button></div></form></section>}
 
       {isProfiles && <>
       <section className="panel">
@@ -211,4 +250,16 @@ export default function App() {
       </>}
     </main>
   </div>;
+}
+
+export default function App() {
+  const [session, setSession] = useState(() => storedSession());
+
+  useEffect(() => {
+    if (!session?.refresh_token) return;
+    const expiresSoon = !session.expires_at || session.expires_at * 1000 < Date.now() + 60000;
+    if (expiresSoon) refreshSession(session.refresh_token).then(setSession).catch(() => setSession(null));
+  }, []);
+
+  return session?.access_token ? <Dashboard session={session} onSessionChange={setSession} /> : <Landing onAuthenticated={setSession} />;
 }

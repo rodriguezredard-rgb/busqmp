@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 from app.models.database import SessionLocal
 from app.models.search_profile import SearchProfile
+from app.core.auth import current_user
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -59,13 +60,25 @@ def values(payload: ProfilePayload) -> dict:
 
 
 @router.get("")
-def list_profiles(db: Session = Depends(get_db)):
-    return [serialize(row) for row in db.query(SearchProfile).order_by(SearchProfile.name).all()]
+def list_profiles(user: dict = Depends(current_user), db: Session = Depends(get_db)):
+    # Conserva las búsquedas creadas antes del login cuando el destinatario
+    # coincide con el correo verificado de la cuenta que ingresa.
+    email = (user.get("email") or "").lower()
+    if email:
+        legacy_rows = db.query(SearchProfile).filter(
+            SearchProfile.owner_id.is_(None),
+            SearchProfile.recipient_email.ilike(email),
+        ).all()
+        if legacy_rows:
+            for row in legacy_rows:
+                row.owner_id = user["id"]
+            db.commit()
+    return [serialize(row) for row in db.query(SearchProfile).filter(SearchProfile.owner_id == user["id"]).order_by(SearchProfile.name).all()]
 
 
 @router.post("", status_code=201)
-def create_profile(payload: ProfilePayload, db: Session = Depends(get_db)):
-    row = SearchProfile(**values(payload))
+def create_profile(payload: ProfilePayload, user: dict = Depends(current_user), db: Session = Depends(get_db)):
+    row = SearchProfile(owner_id=user["id"], **values(payload))
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -73,8 +86,8 @@ def create_profile(payload: ProfilePayload, db: Session = Depends(get_db)):
 
 
 @router.put("/{profile_id}")
-def update_profile(profile_id: int, payload: ProfilePayload, db: Session = Depends(get_db)):
-    row = db.get(SearchProfile, profile_id)
+def update_profile(profile_id: int, payload: ProfilePayload, user: dict = Depends(current_user), db: Session = Depends(get_db)):
+    row = db.query(SearchProfile).filter(SearchProfile.id == profile_id, SearchProfile.owner_id == user["id"]).first()
     if not row:
         raise HTTPException(404, "Perfil no encontrado")
     for key, value in values(payload).items():
@@ -85,8 +98,8 @@ def update_profile(profile_id: int, payload: ProfilePayload, db: Session = Depen
 
 
 @router.delete("/{profile_id}", status_code=204)
-def delete_profile(profile_id: int, db: Session = Depends(get_db)):
-    row = db.get(SearchProfile, profile_id)
+def delete_profile(profile_id: int, user: dict = Depends(current_user), db: Session = Depends(get_db)):
+    row = db.query(SearchProfile).filter(SearchProfile.id == profile_id, SearchProfile.owner_id == user["id"]).first()
     if not row:
         raise HTTPException(404, "Perfil no encontrado")
     db.delete(row)

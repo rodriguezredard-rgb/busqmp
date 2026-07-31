@@ -29,7 +29,7 @@ def initialize_database() -> None:
         additions = {
             "licitaciones_activas": {"category_codes": "TEXT NOT NULL DEFAULT '[]'", "category_names": "TEXT NOT NULL DEFAULT '[]'"},
             "compras_agiles": {"category_codes": "TEXT NOT NULL DEFAULT '[]'", "category_names": "TEXT NOT NULL DEFAULT '[]'"},
-            "busqmp_search_profiles": {"selected_categories": "TEXT NOT NULL DEFAULT '[]'"},
+            "busqmp_search_profiles": {"selected_categories": "TEXT NOT NULL DEFAULT '[]'", "owner_id": "VARCHAR(64)"},
         }
         inspector = inspect(engine)
         with engine.begin() as connection:
