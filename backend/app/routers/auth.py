@@ -46,7 +46,9 @@ def supabase_request(path: str, method: str = "POST", payload: dict | None = Non
 
 @router.post("/login")
 def login(payload: Credentials):
-    return supabase_request("token?grant_type=password", payload=payload.model_dump(mode="json"))
+    data = payload.model_dump(mode="json", exclude={"captcha_token"})
+    data["gotrue_meta_security"] = {"captcha_token": payload.captcha_token or ""}
+    return supabase_request("token?grant_type=password", payload=data)
 
 
 @router.post("/signup")

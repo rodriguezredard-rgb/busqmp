@@ -26,13 +26,13 @@ export default function Landing({ onAuthenticated }) {
       }
       const session = mode === 'register'
         ? await signUp(form.email, form.password, captchaToken)
-        : await signIn(form.email, form.password);
+        : await signIn(form.email, form.password, captchaToken);
       if (session.access_token) onAuthenticated(session);
       else setMessage('Revisa tu correo para confirmar la cuenta antes de ingresar.');
     } catch (error) { setMessage(error.message); } finally { setLoading(false); }
   }
 
-  const needsCaptcha = mode === 'register' || mode === 'recovery';
+  const needsCaptcha = true;
   const title = mode === 'register' ? 'Crea tu cuenta' : mode === 'recovery' ? 'Recupera tu acceso' : 'Bienvenido de vuelta';
   const description = mode === 'register' ? 'Comienza a monitorear oportunidades para tu negocio.' : mode === 'recovery' ? 'Recibirás un enlace seguro para definir una clave nueva.' : 'Ingresa para acceder a tus búsquedas y alertas.';
 

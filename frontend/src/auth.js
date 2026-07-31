@@ -38,8 +38,8 @@ export function recoverySession() {
   return session;
 }
 
-export async function signIn(email, password) {
-  const session = await request('login', { body: { email, password } });
+export async function signIn(email, password, captchaToken) {
+  const session = await request('login', { body: { email, password, captcha_token: captchaToken } });
   saveSession(session);
   return session;
 }
