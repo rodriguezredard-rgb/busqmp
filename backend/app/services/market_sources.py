@@ -93,3 +93,31 @@ class MarketSourcesService:
             if page >= int(pagination.get("total_paginas") or 1):
                 return results
             page += 1
+
+    def fetch_compra_agil_page(self, *, page: int = 1, page_size: int = 50,
+                                published_from: str | None = None,
+                                published_to: str | None = None,
+                                status: str = "publicada") -> tuple[list[dict], dict]:
+        """Obtiene una sola página para mantener cada ejecución bajo el límite serverless."""
+        if not self.ticket:
+            return [], {"numero_pagina": page, "total_paginas": 0, "total_resultados": 0}
+        params = {
+            "publicado_desde": published_from,
+            "publicado_hasta": published_to,
+            "estado": status,
+            "tamano_pagina": min(page_size, 50),
+            "numero_pagina": page,
+            "ordenar_por": "FechaPublicacion",
+        }
+        response = requests.get(
+            "https://api2.mercadopublico.cl/v2/compra-agil",
+            headers={"ticket": self.ticket},
+            params={key: value for key, value in params.items() if value not in (None, "")},
+            timeout=40,
+        )
+        response.raise_for_status()
+        data = response.json() or {}
+        if data.get("success") != "OK":
+            raise RuntimeError(str(data.get("errors") or "Respuesta inválida de Compra Ágil"))
+        payload = data.get("payload") or {}
+        return payload.get("items") or [], payload.get("paginacion") or {}

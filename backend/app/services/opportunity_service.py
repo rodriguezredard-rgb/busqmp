@@ -37,11 +37,10 @@ def _agile_dict(row):
     }
 
 
-def save_compra_agil(data: dict) -> None:
-    initialize_database()
+def _compra_agil_record(data: dict):
     codigo = str(data.get("codigo") or "").strip()
     if not codigo:
-        return
+        return None, None
     estado = data.get("estado") or {}
     fechas = data.get("fechas") or {}
     montos = data.get("montos") or data.get("presupuesto") or {}
@@ -63,16 +62,36 @@ def save_compra_agil(data: dict) -> None:
         "search_text": " ".join([codigo, nombre, descripcion, str(institucion.get("organismo_comprador") or "")]).lower(),
         "source_detail": data, "updated_at": datetime.now(timezone.utc),
     }
+    return codigo, values
+
+
+def save_compras_agiles(items: list[dict]) -> int:
+    initialize_database()
     db = SessionLocal()
     try:
-        row = db.get(CompraAgil, codigo)
-        if row:
-            for key, value in values.items(): setattr(row, key, value)
-        else:
-            db.add(CompraAgil(codigo=codigo, **values))
+        saved = 0
+        for data in items:
+            codigo, values = _compra_agil_record(data)
+            if not codigo:
+                continue
+            row = db.get(CompraAgil, codigo)
+            if row:
+                for key, value in values.items():
+                    setattr(row, key, value)
+            else:
+                db.add(CompraAgil(codigo=codigo, **values))
+            saved += 1
         db.commit()
+        return saved
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
+
+
+def save_compra_agil(data: dict) -> None:
+    save_compras_agiles([data])
 
 
 def sync_active_licitaciones(items: list[dict]) -> int:
