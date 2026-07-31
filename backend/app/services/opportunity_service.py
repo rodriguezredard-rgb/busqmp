@@ -117,8 +117,6 @@ def _category_pairs(detail: dict, source: str) -> list[tuple[str, str]]:
 def save_opportunity_categories(code: str, detail: dict, source: str) -> int:
     initialize_database()
     pairs = _category_pairs(detail, source)
-    if not pairs:
-        return 0
     db = SessionLocal()
     try:
         model = LicitacionActiva if source == "licitacion" else CompraAgil
@@ -126,7 +124,7 @@ def save_opportunity_categories(code: str, detail: dict, source: str) -> int:
         if not row:
             return 0
         row.category_codes = json.dumps([item[0] for item in pairs], ensure_ascii=False)
-        row.category_names = json.dumps([item[1] for item in pairs], ensure_ascii=False)
+        row.category_names = json.dumps([item[1] for item in pairs] or ["Sin categoría disponible"], ensure_ascii=False)
         row.source_detail = detail
         now = datetime.now(timezone.utc)
         for category_code, category_name in pairs:
@@ -162,7 +160,7 @@ def list_unenriched_codes(source: str, limit: int = 5) -> list[str]:
     db = SessionLocal()
     try:
         model = LicitacionActiva if source == "licitacion" else CompraAgil
-        query = db.query(model).filter(model.category_codes == "[]")
+        query = db.query(model).filter(model.category_names == "[]")
         if source == "licitacion":
             query = query.filter(LicitacionActiva.activa.is_(True))
         return [row.codigo for row in query.limit(limit).all()]
