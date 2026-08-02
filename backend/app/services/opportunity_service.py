@@ -275,10 +275,11 @@ def sync_active_licitaciones(items: list[dict]) -> int:
 
 
 def list_opportunities(keyword="", opportunity_type="all", region="", organization="", status="",
-                       minimum_amount=None, maximum_amount=None, limit=50, offset=0):
+                       minimum_amount=None, maximum_amount=None, limit=50, offset=0, sort="recent"):
     db = SessionLocal()
     try:
         results = []
+        query_limit = 10000 if sort != "recent" else limit + offset
         pattern = _keyword_pattern(keyword)
         if opportunity_type in ("all", "licitacion"):
             query = db.query(LicitacionActiva).filter(LicitacionActiva.activa.is_(True))
@@ -286,7 +287,7 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
             if region: query = query.filter(LicitacionActiva.region.ilike(f"%{region}%"))
             if organization: query = query.filter(LicitacionActiva.organismo.ilike(f"%{organization}%"))
             if status: query = query.filter(LicitacionActiva.estado.ilike(f"%{status}%"))
-            results.extend(_licitacion_dict(row) for row in query.order_by(LicitacionActiva.fecha_cierre.asc()).limit(limit + offset).all())
+            results.extend(_licitacion_dict(row) for row in query.order_by(LicitacionActiva.fecha_cierre.asc()).limit(query_limit).all())
         if opportunity_type in ("all", "compra_agil"):
             query = db.query(CompraAgil)
             if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern, escape="\\"))
@@ -298,8 +299,17 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
                 query = query.filter(CompraAgil.estado == "publicada")
             if minimum_amount is not None: query = query.filter(CompraAgil.monto >= minimum_amount)
             if maximum_amount is not None: query = query.filter(CompraAgil.monto <= maximum_amount)
-            results.extend(_agile_dict(row) for row in query.order_by(CompraAgil.fecha_ultimo_cambio.desc()).limit(limit + offset).all())
-        results.sort(key=lambda item: str(item.get("publish_date") or item.get("award_date") or ""), reverse=True)
+            results.extend(_agile_dict(row) for row in query.order_by(CompraAgil.fecha_ultimo_cambio.desc()).limit(query_limit).all())
+        if sort in ("amount_desc", "amount_asc"):
+            available = [item for item in results if item.get("amount") is not None]
+            unavailable = [item for item in results if item.get("amount") is None]
+            available.sort(key=lambda item: float(item["amount"]), reverse=sort == "amount_desc")
+            results = available + unavailable
+        else:
+            results.sort(
+                key=lambda item: str(item.get("publish_date") or item.get("award_date") or ""),
+                reverse=sort != "oldest",
+            )
         return results[offset:offset + limit]
     finally:
         db.close()

@@ -44,6 +44,7 @@ function Dashboard({ session, onSessionChange }) {
   const [editingId, setEditingId] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [searchProfileId, setSearchProfileId] = useState('manual');
+  const [sortOrder, setSortOrder] = useState('recent');
   const [searchFilters, setSearchFilters] = useState({ region: '', organization: '', status: '' });
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -74,7 +75,7 @@ function Dashboard({ session, onSessionChange }) {
     setCategories(await response.json());
   }
 
-  async function search(event, requestedPage = 0, requestedModule = activeModule) {
+  async function search(event, requestedPage = 0, requestedModule = activeModule, requestedSort = sortOrder) {
     event?.preventDefault();
     setLoading(true);
     try {
@@ -83,6 +84,7 @@ function Dashboard({ session, onSessionChange }) {
         opportunity_type: requestedModule,
         limit: String(pageSize),
         offset: String(requestedPage * pageSize),
+        sort: requestedSort,
       });
       Object.entries(searchFilters).forEach(([key, value]) => {
         if (value) params.set(key, value);
@@ -119,10 +121,10 @@ function Dashboard({ session, onSessionChange }) {
     } catch (error) { setMessage(error.message); }
   }
 
-  async function searchSavedProfile(profile, module = activeModule, requestedPage = 0) {
+  async function searchSavedProfile(profile, module = activeModule, requestedPage = 0, requestedSort = sortOrder) {
     setLoading(true); setSearchProfileId(String(profile.id));
     try {
-      const params = new URLSearchParams({ opportunity_type: module, limit: String(pageSize), offset: String(requestedPage * pageSize) });
+      const params = new URLSearchParams({ opportunity_type: module, limit: String(pageSize), offset: String(requestedPage * pageSize), sort: requestedSort });
       const response = await fetch(`${API}/profiles/${profile.id}/matches?${params}`, { headers: authHeaders });
       if (!response.ok) throw new Error('No se pudo aplicar la búsqueda guardada');
       setItems(await response.json());
@@ -141,6 +143,12 @@ function Dashboard({ session, onSessionChange }) {
   function changeResultsPage(nextPage) {
     const profile = profiles.find((item) => String(item.id) === searchProfileId);
     return profile ? searchSavedProfile(profile, activeModule, nextPage) : search(null, nextPage);
+  }
+
+  function changeSort(value) {
+    setSortOrder(value);
+    const profile = profiles.find((item) => String(item.id) === searchProfileId);
+    return profile ? searchSavedProfile(profile, activeModule, 0, value) : search(null, 0, activeModule, value);
   }
 
   useEffect(() => {
@@ -238,7 +246,7 @@ function Dashboard({ session, onSessionChange }) {
           <label>Estado<input value={searchFilters.status} onChange={(e) => setSearch('status', e.target.value)} /></label>
           <div className="actions"><button disabled={loading}>{loading ? 'Buscando…' : `Buscar ${isAgile ? 'compras ágiles' : 'licitaciones'}`}</button></div>
         </form>}
-        <div className="result-summary"><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div>
+        <div className="result-summary"><div><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div><label className="sort-control">Ordenar por<select value={sortOrder} onChange={(event) => changeSort(event.target.value)}><option value="recent">Más recientes</option><option value="oldest">Más antiguas</option><option value="amount_desc">Mayor monto</option><option value="amount_asc">Menor monto</option></select></label></div>
         <div className="results">{items.map((item) => <article className="result-card" key={item.id}>
           <div className="result-card-head"><div className="result-labels"><span className="result-type">ID: {item.external_id}</span></div><span className="status-pill">{item.status || 'Sin estado'}</span></div>
           <h3 className="result-title">{item.title}</h3>

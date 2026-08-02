@@ -16,10 +16,11 @@ def get_opportunities(
     organization: str = "", status: str = "", minimum_amount: float | None = None,
     maximum_amount: float | None = None, limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    sort: str = Query("recent", pattern="^(recent|oldest|amount_desc|amount_asc)$"),
 ):
     response.headers["X-Total-Count"] = str(count_opportunities(
         keyword, opportunity_type, region, organization, status, minimum_amount, maximum_amount,
     ))
-    return list_opportunities(keyword, opportunity_type, region, organization, status, minimum_amount, maximum_amount, limit, offset)
+    return list_opportunities(keyword, opportunity_type, region, organization, status, minimum_amount, maximum_amount, limit, offset, sort)
 
 

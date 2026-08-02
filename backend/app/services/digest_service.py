@@ -38,7 +38,7 @@ def format_amount(value, currency: str) -> str:
 
 
 def matching_opportunities(profile: SearchProfile, limit: int | None = 100, offset: int = 0,
-                           opportunity_type: str | None = None):
+                           opportunity_type: str | None = None, sort: str = "recent"):
     included = json.loads(profile.include_keywords or "[]") or [""]
     excluded = json.loads(profile.exclude_keywords or "[]")
     selected_categories = set(json.loads(profile.selected_categories or "[]"))
@@ -67,7 +67,13 @@ def matching_opportunities(profile: SearchProfile, limit: int | None = 100, offs
                if matches_category(row)
                and not any(matches_text_pattern(word, f"{row['title']} {row.get('description', '')}")
                            for word in excluded)]
-    matches.sort(key=lambda item: str(item.get("publish_date") or item.get("closing_date") or ""), reverse=True)
+    if sort in ("amount_desc", "amount_asc"):
+        available = [item for item in matches if item.get("amount") is not None]
+        unavailable = [item for item in matches if item.get("amount") is None]
+        available.sort(key=lambda item: float(item["amount"]), reverse=sort == "amount_desc")
+        matches = available + unavailable
+    else:
+        matches.sort(key=lambda item: str(item.get("publish_date") or item.get("closing_date") or ""), reverse=sort != "oldest")
     return matches[offset:] if limit is None else matches[offset:offset + limit]
 
 

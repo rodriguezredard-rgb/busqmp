@@ -93,6 +93,7 @@ def profile_matches(
     opportunity_type: str = Query("all", pattern="^(all|licitacion|compra_agil)$"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    sort: str = Query("recent", pattern="^(recent|oldest|amount_desc|amount_asc)$"),
     user: dict = Depends(current_user),
     db: Session = Depends(get_db),
 ):
@@ -102,7 +103,7 @@ def profile_matches(
     ).first()
     if not row:
         raise HTTPException(404, "Perfil no encontrado")
-    matches = matching_opportunities(row, limit=None, opportunity_type=opportunity_type)
+    matches = matching_opportunities(row, limit=None, opportunity_type=opportunity_type, sort=sort)
     response.headers["X-Total-Count"] = str(len(matches))
     return matches[offset:offset + limit]
 
