@@ -617,3 +617,76 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .market-submenu { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; margin: 2px 0; padding: 0; border: 0; }
   .app-shell .market-submenu button { justify-content: center; }
 }
+
+/* Authenticated workspace — Shopify Admin inspired */
+.app-shell { --admin-bg:#f1f1f1; --admin-nav:#ebebeb; --admin-card:#fff; --admin-text:#303030; --admin-muted:#616161; --admin-border:#d7d7d7; --admin-green:#008060; background:var(--admin-bg); }
+.app-shell .sidebar { padding:14px 10px 12px; border-right-color:#d4d4d4; color:var(--admin-text); background:var(--admin-nav); }
+.app-shell .brand { min-height:46px; padding:5px 7px 13px; }
+.app-shell .brand > span { width:30px; height:30px; border-radius:7px; background:var(--admin-green); }
+.app-shell .brand strong { color:var(--admin-text); font-weight:600; }
+.app-shell .brand small, .app-shell .module-nav small, .app-shell .nav-caption { color:#767676; }
+.app-shell .nav-caption { margin-top:17px; font-weight:600; letter-spacing:.025em; }
+.app-shell .module-nav { gap:3px; }
+.app-shell .module-nav button { min-height:40px; padding:6px 8px; border-radius:8px; color:#4a4a4a; }
+.app-shell .module-nav button:hover:not(:disabled) { color:var(--admin-text); background:#dedede; }
+.app-shell .module-nav button.active { color:var(--admin-text); background:#d9d9d9; }
+.app-shell .module-nav button.active > span { color:var(--admin-green); }
+.app-shell .primary-nav { min-height:50px; border:1px solid #d5d5d5; background:#f7f7f7; }
+.app-shell .primary-nav:hover:not(:disabled), .app-shell .primary-nav.active { background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+.app-shell .primary-nav > span, .app-shell .primary-nav.active > span { border-radius:6px; color:#fff; background:var(--admin-green); }
+.app-shell .market-submenu { border-left-color:#c8c8c8; }
+.app-shell .market-submenu button.active { background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+.app-shell .sidebar-account { padding-top:10px; border-top:1px solid #d3d3d3; border-radius:0; }
+.app-shell .sidebar-account:hover:not(:disabled) { background:#dedede; }
+.app-shell .live-dot { background:#29845a; }
+.app-shell .app { width:min(1050px, calc(100% - 64px)); padding:34px 0 80px; }
+.app-shell .page-header { min-height:76px; padding:8px 2px 22px; border:0; }
+.app-shell .page-header h1 { color:var(--admin-text); font-size:25px; font-weight:650; letter-spacing:-.025em; }
+.app-shell .page-header p { color:var(--admin-muted); font-size:13px; }
+.app-shell .result-count { padding:7px 11px; border-color:#cfcfcf; border-radius:8px; background:#fff; box-shadow:0 1px 1px rgba(0,0,0,.03); }
+.app-shell .panel { margin-top:16px; padding:20px; border:1px solid var(--admin-border); border-radius:12px; background:var(--admin-card); box-shadow:0 1px 2px rgba(0,0,0,.06),0 1px 1px rgba(0,0,0,.03); }
+.app-shell .module-panel { margin-top:0; }
+.app-shell .section-heading { padding:0 0 17px; }
+.app-shell h2 { color:var(--admin-text); font-size:17px; font-weight:650; }
+.app-shell .section-heading p, .app-shell .panel-intro { color:var(--admin-muted); }
+.app-shell .module-chip { padding:5px 8px; border-color:#b7d9cc; border-radius:8px; color:#006e52; background:#e5f3ee; font-weight:600; }
+.app-shell .saved-search-selector { margin:0 -20px; padding:15px 20px; background:#fafafa; }
+.app-shell .applied-profile { min-height:60px; border-color:#b7d9cc; border-radius:9px; background:#eef8f4; }
+.app-shell .applied-profile > span { border-radius:6px; color:#006e52; background:#d8eee6; font-weight:650; }
+.app-shell .search-filters { gap:10px; padding:17px 0; }
+.app-shell label { color:#4a4a4a; font-weight:600; }
+.app-shell input, .app-shell select { min-height:38px; border-color:#bfbfbf; border-radius:8px; color:var(--admin-text); background:#fff; }
+.app-shell input:hover, .app-shell select:hover { border-color:#8a8a8a; }
+.app-shell input:focus, .app-shell select:focus { border-color:#303030; box-shadow:0 0 0 2px #fff,0 0 0 4px #458fff; }
+.app-shell button { border-radius:8px; font-weight:600; }
+.app-shell .search-filters .actions button, .app-shell .account-form .actions button, .app-shell .grid > .actions > button:first-child { color:#fff; background:#303030; box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.12); }
+.app-shell .search-filters .actions button:hover:not(:disabled), .app-shell .account-form .actions button:hover:not(:disabled), .app-shell .grid > .actions > button:first-child:hover:not(:disabled) { background:#1a1a1a; }
+.app-shell .results { border:1px solid var(--admin-border); border-radius:10px; overflow:hidden; }
+.app-shell .result-card { padding:16px; border-bottom-color:#e2e2e2; background:#fff; }
+.app-shell .result-card:last-child { border-bottom:0; }
+.app-shell .result-card:hover { background:#f7f7f7; }
+.app-shell .result-type { border-radius:6px; color:#005d45; background:#dff3eb; font-weight:650; }
+.app-shell .status-pill { border-radius:6px; color:#5b4b00; background:#f8edc5; font-weight:650; }
+.app-shell .result-title { color:var(--admin-text); font-weight:620; }
+.app-shell .result-metadata { border-color:#dedede; border-radius:8px; background:#dedede; }
+.app-shell .result-metadata > span, .app-shell .result-metadata > span.amount { background:#fafafa; }
+.app-shell .result-link { color:#006e52; font-weight:650; }
+.app-shell .pagination button { border-color:#c9c9c9; border-radius:8px; background:#fff; box-shadow:0 1px 1px rgba(0,0,0,.04); }
+.app-shell .notice { border-color:#9fcaba; border-radius:9px; background:#eaf6f1; }
+.app-shell .settings-layer, .app-shell .appearance-panel, .app-shell .account-panel { max-width:760px; margin-top:16px; padding:22px; }
+.app-shell .settings-menu button { padding:10px; border:1px solid var(--admin-border); border-radius:9px; background:#fff; }
+.app-shell .settings-menu button:hover:not(:disabled) { border-color:#aaa; background:#f7f7f7; }
+.app-shell .settings-back { margin-left:max(0px, calc((100% - 760px)/2)); border:1px solid #c9c9c9; background:#fff; }
+.app-shell .category-picker { border-color:#c9c9c9; border-radius:10px; background:#fafafa; }
+.app-shell .category-tree details { border-color:#d6d6d6; border-radius:8px; }
+.app-shell .keyword-tag-input { border-color:#bfbfbf; border-radius:8px; }
+.app-shell .keyword-tag { background:#006e52; }
+.app-shell .profiles { border:1px solid var(--admin-border); border-radius:10px; overflow:hidden; }
+.app-shell .profiles article { padding:14px; border-bottom-color:#e2e2e2; background:#fff; }
+.app-shell .profiles article:last-child { border-bottom:0; }
+.app-shell .theme-options button { border-color:#c9c9c9; border-radius:9px; }
+:root[data-theme="dark"] .app-shell { --admin-bg:#202321; --admin-nav:#171a18; --admin-card:#292d2a; --admin-text:#f1f3f1; --admin-muted:#b3bbb6; --admin-border:#414642; background:var(--admin-bg); }
+:root[data-theme="dark"] .app-shell .sidebar { background:var(--admin-nav); }
+:root[data-theme="dark"] .app-shell .panel, :root[data-theme="dark"] .app-shell .result-card, :root[data-theme="dark"] .app-shell .profiles article, :root[data-theme="dark"] .app-shell .settings-menu button { background:var(--admin-card); }
+@media (prefers-color-scheme:dark) { :root[data-theme="system"] .app-shell { --admin-bg:#202321; --admin-nav:#171a18; --admin-card:#292d2a; --admin-text:#f1f3f1; --admin-muted:#b3bbb6; --admin-border:#414642; background:var(--admin-bg); } :root[data-theme="system"] .app-shell .sidebar { background:var(--admin-nav); } }
+@media (max-width:720px) { .app-shell .app { width:min(100% - 24px,1050px); padding-top:24px; } .app-shell .panel { padding:15px; } .app-shell .saved-search-selector { margin-inline:-15px; padding-inline:15px; } }
