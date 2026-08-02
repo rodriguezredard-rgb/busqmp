@@ -690,3 +690,8 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 :root[data-theme="dark"] .app-shell .panel, :root[data-theme="dark"] .app-shell .result-card, :root[data-theme="dark"] .app-shell .profiles article, :root[data-theme="dark"] .app-shell .settings-menu button { background:var(--admin-card); }
 @media (prefers-color-scheme:dark) { :root[data-theme="system"] .app-shell { --admin-bg:#202321; --admin-nav:#171a18; --admin-card:#292d2a; --admin-text:#f1f3f1; --admin-muted:#b3bbb6; --admin-border:#414642; background:var(--admin-bg); } :root[data-theme="system"] .app-shell .sidebar { background:var(--admin-nav); } }
 @media (max-width:720px) { .app-shell .app { width:min(100% - 24px,1050px); padding-top:24px; } .app-shell .panel { padding:15px; } .app-shell .saved-search-selector { margin-inline:-15px; padding-inline:15px; } }
+
+/* Sidebar labels: one clear line per action */
+.app-shell .module-nav button small { display:none; }
+.app-shell .primary-nav { min-height:42px; }
+.app-shell .module-nav button div { align-content:center; }
