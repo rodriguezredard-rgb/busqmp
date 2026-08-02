@@ -34,6 +34,7 @@ function Dashboard({ session, onSessionChange }) {
   const [activeModule, setActiveModule] = useState('settings');
   const [settingsPage, setSettingsPage] = useState(session.recovery ? 'account' : 'profiles');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [marketMenuOpen, setMarketMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('busqmp_theme') || 'system');
   const [items, setItems] = useState([]);
   const [profiles, setProfiles] = useState([]);
@@ -106,6 +107,7 @@ function Dashboard({ session, onSessionChange }) {
       setMessage('');
       return;
     }
+    setMarketMenuOpen(true);
     setItems([]); setTotal(0); setPage(0);
     try {
       const availableProfiles = profiles.length ? profiles : await loadProfiles();
@@ -209,16 +211,17 @@ function Dashboard({ session, onSessionChange }) {
   async function logout() { await signOut(session.access_token); onSessionChange(null); }
 
   return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-    <aside className="sidebar">
+    <aside className="sidebar" onClick={(event) => { if (sidebarCollapsed && !event.target.closest('button')) setSidebarCollapsed(false); }}>
       <div className="brand"><span>BO</span><div><strong>Oportunidades</strong><small>Mercado Público</small></div><button className="sidebar-toggle" aria-label={sidebarCollapsed ? 'Mostrar menú' : 'Ocultar menú'} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>{sidebarCollapsed ? '›' : '‹'}</button></div>
       <small className="nav-caption">Principal</small>
       <nav className="module-nav" aria-label="Módulos de oportunidades">
         <button className={`primary-nav ${isProfiles ? 'active' : ''}`} onClick={() => openSettings('profiles')}><span>＋</span><div><strong>Configurar búsquedas</strong><small>Recibe oportunidades por correo</small></div></button>
         <small className="nav-caption inline-caption">Explorar oportunidades</small>
-        <div className="market-nav-row">
+        <button className={`market-parent ${activeModule === 'licitacion' || activeModule === 'compra_agil' ? 'active' : ''}`} aria-expanded={marketMenuOpen} onClick={() => { if (sidebarCollapsed) setSidebarCollapsed(false); setMarketMenuOpen(!marketMenuOpen); }}><span>MP</span><div><strong>Mercado Público</strong><small>Licitaciones y compras ágiles</small></div><b>{marketMenuOpen ? '⌄' : '›'}</b></button>
+        {marketMenuOpen && !sidebarCollapsed && <div className="market-submenu">
           <button className={activeModule === 'licitacion' ? 'active' : ''} onClick={() => switchModule('licitacion')}><span>L</span><div><strong>Licitaciones</strong></div></button>
-          <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>CA</span><div><strong>Compra Ágil</strong></div></button>
-        </div>
+          <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>CA</span><div><strong>Compras Ágiles</strong></div></button>
+        </div>}
         <button className={activeModule === 'settings' && !isProfiles ? 'active' : ''} onClick={() => switchModule('settings')}><span>⚙</span><div><strong>Settings</strong><small>Cuenta y preferencias</small></div></button>
       </nav>
       <div className="sidebar-note"><span className="live-dot" aria-hidden="true" />Sincronización automática activa</div>
@@ -231,7 +234,7 @@ function Dashboard({ session, onSessionChange }) {
 
       {!isSettings && <>
       <section className="panel module-panel"><div className="section-heading"><div><h2>Buscar {isAgile ? 'compras ágiles' : 'licitaciones'}</h2><p>Filtra los registros guardados en la base de oportunidades.</p></div><span className="module-chip">{isAgile ? 'Compra Ágil' : 'Licitación'}</span></div>
-        <div className="saved-search-selector"><label>Búsqueda aplicada<select value={searchProfileId} onChange={(event) => chooseSearchProfile(event.target.value)}><option value="manual">Búsqueda nueva</option>{profiles.filter((profile) => profile.opportunity_type === 'all' || profile.opportunity_type === activeModule).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>{searchProfileId !== 'manual' && <div className="applied-profile"><span>Filtros configurados</span>{(() => { const profile = profiles.find((item) => String(item.id) === searchProfileId); return profile ? <><b>{profile.name}</b><small>{[...profile.include_keywords, ...profile.selected_categories.map((code) => `Rubro ${code}`), profile.region, profile.organization].filter(Boolean).slice(0, 6).join(' · ') || 'Todos los registros'}</small></> : null; })()}</div>}</div>
+        <div className="saved-search-selector"><label>Búsqueda aplicada<select value={searchProfileId} onChange={(event) => chooseSearchProfile(event.target.value)}><option value="manual">Búsqueda nueva en {isAgile ? 'Compras Ágiles' : 'Licitaciones'}</option>{profiles.filter((profile) => profile.opportunity_type === 'all' || profile.opportunity_type === activeModule).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>{searchProfileId !== 'manual' && <div className="applied-profile"><span>Filtros configurados</span>{(() => { const profile = profiles.find((item) => String(item.id) === searchProfileId); return profile ? <><b>{profile.name}</b><small>{[...profile.include_keywords, ...profile.selected_categories.map((code) => `Rubro ${code}`), profile.region, profile.organization].filter(Boolean).slice(0, 6).join(' · ') || 'Todos los registros'}</small></> : null; })()}</div>}</div>
         {searchProfileId === 'manual' && <form className="search-filters" onSubmit={(event) => search(event, 0)}>
           <label className="wide">Palabra clave<input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Ej. servicio, mantención, equipos" /></label>
           <label>Región<input value={searchFilters.region} onChange={(e) => setSearch('region', e.target.value)} /></label>

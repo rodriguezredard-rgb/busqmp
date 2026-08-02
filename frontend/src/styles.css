@@ -577,16 +577,17 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .app-shell .result-link { font-size: 12px; }
 
 .module-nav .inline-caption { margin: 17px 9px 5px; }
-.market-nav-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.app-shell .market-nav-row button { min-width: 0; display: grid; justify-items: center; gap: 2px; padding: 7px 4px; text-align: center; }
-.app-shell .market-nav-row button > span { width: 24px; height: 20px; font-size: 10px; }
-.app-shell .market-nav-row button div { min-width: 0; text-align: center; }
-.app-shell .market-nav-row button strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .market-parent { grid-template-columns: 25px minmax(0, 1fr) auto; }
+.app-shell .market-parent > b { color: #92928e; font-size: 15px; font-weight: 400; }
+.market-submenu { display: grid; gap: 1px; margin: 2px 0 5px 17px; padding-left: 10px; border-left: 1px solid #dededb; }
+.app-shell .market-submenu button { min-height: 34px; padding-block: 4px; }
+.app-shell .market-submenu button > span { flex-basis: 22px; width: 22px; height: 22px; font-size: 9px; }
+.app-shell .market-submenu button strong { font-size: 12px; }
 .app-shell .primary-nav { min-height: 48px; margin-bottom: 2px; }
 .app-shell .primary-nav > span { color: #fff; background: #23856f; }
 .app-shell .primary-nav.active > span { color: #fff; background: #23856f; }
-.sidebar-collapsed .market-nav-row { grid-template-columns: 1fr; }
 .sidebar-collapsed .inline-caption { display: none; }
+.sidebar-collapsed .sidebar { cursor: e-resize; }
 
 .landing-nav a, .landing-nav button { font-size: 13px; }
 .landing-brand strong { font-size: 15px; }
@@ -610,7 +611,9 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .landing .auth-card input { font-size: 13px; }
 
 @media (max-width: 720px) {
-  .market-nav-row { display: contents; }
-  .app-shell .market-nav-row button { display: flex; justify-content: center; }
   .module-nav .inline-caption { display: none; }
+  .app-shell .market-parent { display: flex; justify-content: center; }
+  .app-shell .market-parent > b { display: none; }
+  .market-submenu { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; margin: 2px 0; padding: 0; border: 0; }
+  .app-shell .market-submenu button { justify-content: center; }
 }
