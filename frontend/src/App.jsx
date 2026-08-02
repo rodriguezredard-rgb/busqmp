@@ -265,7 +265,6 @@ function Dashboard({ session, onSessionChange }) {
         <p className="panel-intro">Guarda un rubro y define qué palabras deben aparecer y cuáles deben descartarse.</p>
         <form onSubmit={saveProfile} className="grid">
           <label>Nombre de la búsqueda<input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej. Servicios eléctricos" /></label>
-          <label>Rubro<input required value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Ej. Electricidad industrial" /></label>
           <label className="wide">Palabras que debe buscar<KeywordTagInput key={`${editingId ?? 'new'}-include`} value={form.include_keywords} onChange={(value) => set('include_keywords', value)} placeholder="Ej. vet*, cableado, mantención" /><small>Presiona coma o Enter para agregar cada tag. Usa * para incluir variantes: vet* encuentra veterinaria y veterinarios.</small></label>
           <label className="wide">Palabras que debe excluir<KeywordTagInput key={`${editingId ?? 'new'}-exclude`} value={form.exclude_keywords} onChange={(value) => set('exclude_keywords', value)} placeholder="Ej. arriend*, usado" tone="exclude" /><small>Estas palabras y sus variantes no aparecerán en los resultados enviados.</small></label>
           <CategoryPicker categories={categories} selected={form.selected_categories} search={categorySearch} onSearch={setCategorySearch} toggle={toggleCategory} />
@@ -283,7 +282,7 @@ function Dashboard({ session, onSessionChange }) {
       </section>
 
       <section className="panel"><h2>Mis búsquedas programadas</h2><div className="profiles">
-        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p><span className="profile-industry">{profile.opportunity_type === 'compra_agil' ? 'Compra Ágil' : profile.opportunity_type === 'licitacion' ? 'Licitación' : 'Ambos (anterior)'}</span> · {profile.industry} · {profile.delivery_time} · {profile.recipient_email}</p><small><b>Incluye:</b> {profile.include_keywords.join(', ') || 'Todas'} · <b>Excluye:</b> {profile.exclude_keywords.join(', ') || 'Ninguna'} · <b>Rubros:</b> {profile.selected_categories?.length || 0} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
+        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p><span className="profile-industry">{profile.opportunity_type === 'compra_agil' ? 'Compra Ágil' : profile.opportunity_type === 'licitacion' ? 'Licitación' : 'Ambos (anterior)'}</span> · {profile.delivery_time} · {profile.recipient_email}</p><small><b>Incluye:</b> {profile.include_keywords.join(', ') || 'Todas'} · <b>Excluye:</b> {profile.exclude_keywords.join(', ') || 'Ninguna'} · <b>Rubros:</b> {profile.selected_categories?.length || 0} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
         {!profiles.length && <p>Aún no tienes búsquedas programadas.</p>}
       </div></section>
       </>}
