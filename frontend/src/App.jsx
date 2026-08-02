@@ -178,12 +178,14 @@ function Dashboard({ session, onSessionChange }) {
   return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
       <div className="brand"><span>BO</span><div><strong>Oportunidades</strong><small>Mercado Público</small></div><button className="sidebar-toggle" aria-label={sidebarCollapsed ? 'Mostrar menú' : 'Ocultar menú'} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>{sidebarCollapsed ? '›' : '‹'}</button></div>
+      <small className="nav-caption">Espacio de trabajo</small>
       <nav className="module-nav" aria-label="Módulos de oportunidades">
-        <button className={activeModule === 'licitacion' ? 'active' : ''} onClick={() => switchModule('licitacion')}><span>L</span><div><strong>Licitaciones</strong><small>Procesos activos</small></div></button>
-        <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>CA</span><div><strong>Compras Ágiles</strong><small>Oportunidades rápidas</small></div></button>
+        <button className={activeModule === 'licitacion' ? 'active' : ''} onClick={() => switchModule('licitacion')}><span>⌕</span><div><strong>Licitaciones</strong><small>Procesos activos</small></div></button>
+        <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>↗</span><div><strong>Compras Ágiles</strong><small>Oportunidades rápidas</small></div></button>
         <button className={activeModule === 'settings' ? 'active' : ''} onClick={() => switchModule('settings')}><span>⚙</span><div><strong>Settings</strong><small>Cuenta y preferencias</small></div></button>
       </nav>
-      <div className="sidebar-note"><span className="live-dot" aria-hidden="true" />Datos sincronizados automáticamente desde Mercado Público.</div>
+      <div className="sidebar-note"><span className="live-dot" aria-hidden="true" />Sincronización automática activa</div>
+      <button className="sidebar-account" onClick={() => switchModule('settings')}><span>{session.user?.email?.slice(0, 1).toUpperCase() || 'U'}</span><div><strong>{session.user?.email || 'Mi cuenta'}</strong><small>Administrar cuenta</small></div></button>
     </aside>
 
     <main className="app">
