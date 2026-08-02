@@ -42,6 +42,7 @@ function Dashboard({ session, onSessionChange }) {
   const [form, setForm] = useState(emptyProfile);
   const [editingId, setEditingId] = useState(null);
   const [keyword, setKeyword] = useState('');
+  const [searchProfileId, setSearchProfileId] = useState('manual');
   const [searchFilters, setSearchFilters] = useState({ region: '', organization: '', status: '' });
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -61,7 +62,9 @@ function Dashboard({ session, onSessionChange }) {
   async function loadProfiles() {
     const response = await fetch(`${API}/profiles`, { headers: authHeaders });
     if (!response.ok) throw new Error('No se pudieron cargar los perfiles');
-    setProfiles(await response.json());
+    const data = await response.json();
+    setProfiles(data);
+    return data;
   }
 
   async function loadCategories() {
@@ -96,17 +99,46 @@ function Dashboard({ session, onSessionChange }) {
     }
   }
 
-  function switchModule(module) {
+  async function switchModule(module) {
     setActiveModule(module);
     if (module === 'settings') {
       setSettingsPage('menu');
       setMessage('');
       return;
     }
-    setItems([]);
-    setTotal(0);
-    setPage(0);
-    search(null, 0, module);
+    setItems([]); setTotal(0); setPage(0);
+    try {
+      const availableProfiles = profiles.length ? profiles : await loadProfiles();
+      const selected = availableProfiles.find((profile) => String(profile.id) === String(searchProfileId)
+        && (profile.opportunity_type === 'all' || profile.opportunity_type === module));
+      const fallback = availableProfiles.find((profile) => profile.opportunity_type === 'all' || profile.opportunity_type === module);
+      if (selected || fallback) await searchSavedProfile(selected || fallback, module, 0);
+      else { setSearchProfileId('manual'); await search(null, 0, module); }
+    } catch (error) { setMessage(error.message); }
+  }
+
+  async function searchSavedProfile(profile, module = activeModule, requestedPage = 0) {
+    setLoading(true); setSearchProfileId(String(profile.id));
+    try {
+      const params = new URLSearchParams({ opportunity_type: module, limit: String(pageSize), offset: String(requestedPage * pageSize) });
+      const response = await fetch(`${API}/profiles/${profile.id}/matches?${params}`, { headers: authHeaders });
+      if (!response.ok) throw new Error('No se pudo aplicar la búsqueda guardada');
+      setItems(await response.json());
+      setTotal(Number(response.headers.get('X-Total-Count') || 0));
+      setPage(requestedPage); setMessage('');
+    } catch (error) { setMessage(error.message); } finally { setLoading(false); }
+  }
+
+  function chooseSearchProfile(value) {
+    setSearchProfileId(value); setPage(0);
+    if (value === 'manual') { setItems([]); setTotal(0); return; }
+    const profile = profiles.find((item) => String(item.id) === value);
+    if (profile) searchSavedProfile(profile, activeModule, 0);
+  }
+
+  function changeResultsPage(nextPage) {
+    const profile = profiles.find((item) => String(item.id) === searchProfileId);
+    return profile ? searchSavedProfile(profile, activeModule, nextPage) : search(null, nextPage);
   }
 
   useEffect(() => {
@@ -199,13 +231,14 @@ function Dashboard({ session, onSessionChange }) {
 
       {!isSettings && <>
       <section className="panel module-panel"><div className="section-heading"><div><h2>Buscar {isAgile ? 'compras ágiles' : 'licitaciones'}</h2><p>Filtra los registros guardados en la base de oportunidades.</p></div><span className="module-chip">{isAgile ? 'Compra Ágil' : 'Licitación'}</span></div>
-        <form className="search-filters" onSubmit={(event) => search(event, 0)}>
+        <div className="saved-search-selector"><label>Búsqueda aplicada<select value={searchProfileId} onChange={(event) => chooseSearchProfile(event.target.value)}><option value="manual">Búsqueda nueva</option>{profiles.filter((profile) => profile.opportunity_type === 'all' || profile.opportunity_type === activeModule).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>{searchProfileId !== 'manual' && <div className="applied-profile"><span>Filtros configurados</span>{(() => { const profile = profiles.find((item) => String(item.id) === searchProfileId); return profile ? <><b>{profile.name}</b><small>{[...profile.include_keywords, ...profile.selected_categories.map((code) => `Rubro ${code}`), profile.region, profile.organization].filter(Boolean).slice(0, 6).join(' · ') || 'Todos los registros'}</small></> : null; })()}</div>}</div>
+        {searchProfileId === 'manual' && <form className="search-filters" onSubmit={(event) => search(event, 0)}>
           <label className="wide">Palabra clave<input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Ej. servicio, mantención, equipos" /></label>
           <label>Región<input value={searchFilters.region} onChange={(e) => setSearch('region', e.target.value)} /></label>
           <label>Organismo<input value={searchFilters.organization} onChange={(e) => setSearch('organization', e.target.value)} /></label>
           <label>Estado<input value={searchFilters.status} onChange={(e) => setSearch('status', e.target.value)} /></label>
           <div className="actions"><button disabled={loading}>{loading ? 'Buscando…' : `Buscar ${isAgile ? 'compras ágiles' : 'licitaciones'}`}</button></div>
-        </form>
+        </form>}
         <div className="result-summary"><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div>
         <div className="results">{items.map((item) => <article className="result-card" key={item.id}>
           <div className="result-card-head"><div className="result-labels"><span className="result-type">{item.opportunity_type === 'compra_agil' ? 'Compra Ágil' : 'Licitación'}</span><span className="result-code">{item.external_id}</span></div><span className="status-pill">{item.status || 'Sin estado'}</span></div>
@@ -215,7 +248,7 @@ function Dashboard({ session, onSessionChange }) {
           {item.url && <a className="result-link" href={item.url} target="_blank" rel="noreferrer">Ver oportunidad <span aria-hidden="true">↗</span></a>}
         </article>)}</div>
         {!loading && !items.length && <div className="empty-state">No hay resultados para los filtros seleccionados.</div>}
-        {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => search(null, page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => search(null, page + 1)}>Siguiente</button></nav>}
+        {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => changeResultsPage(page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => changeResultsPage(page + 1)}>Siguiente</button></nav>}
       </section>
       </>}
 

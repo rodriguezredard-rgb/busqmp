@@ -271,6 +271,12 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .app-shell button { border-radius: 5px; padding: 7px 11px; font-size: 11px; font-weight: 500; }
 .app-shell button:hover:not(:disabled) { box-shadow: none; transform: none; }
 .app-shell .search-filters .actions button { min-width: 130px; padding: 8px 13px; background: #23856f; }
+.saved-search-selector { display: grid; grid-template-columns: minmax(220px, .65fr) 1.35fr; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.saved-search-selector label { align-self: start; }
+.applied-profile { min-height: 58px; display: grid; grid-template-columns: auto 1fr; align-content: center; gap: 3px 10px; padding: 9px 11px; border: 1px solid #cfe1db; border-radius: 6px; background: #f2f8f6; }
+.applied-profile > span { grid-row: 1 / 3; align-self: center; padding: 4px 6px; border-radius: 4px; color: #23705f; background: #dfeee9; font-size: 9px; font-weight: 550; text-transform: uppercase; }
+.applied-profile b { color: var(--ink); font-size: 12px; font-weight: 520; }
+.applied-profile small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .app-shell .result-summary { margin: 18px 1px 9px; font-size: 11px; }
 .app-shell .result-summary strong { font-weight: 520; }
 .app-shell .results { gap: 0; border-top: 1px solid var(--line); }
@@ -312,6 +318,8 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 :root[data-theme="dark"] .sidebar-account:hover:not(:disabled) { color: #fff; background: #252826; }
 :root[data-theme="dark"] .app-shell .result-type { color: #8bd0bd; background: #183e34; }
 :root[data-theme="dark"] .app-shell .status-pill { color: #d1c99d; background: #3b3828; }
+:root[data-theme="dark"] .applied-profile { border-color: #31544c; background: #183b34; }
+:root[data-theme="dark"] .applied-profile > span { color: #9bd3c4; background: #224d43; }
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] .app-shell .sidebar { background: #171918; }
   :root[data-theme="system"] .app-shell .brand strong, :root[data-theme="system"] .app-shell .module-nav button,
@@ -389,6 +397,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .app-shell { grid-template-columns: 210px minmax(0, 1fr); gap: 0; padding: 0; }
   .app-shell .app { width: min(100% - 38px, 1120px); }
   .app-shell .search-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .saved-search-selector { grid-template-columns: 1fr; }
   .result-metadata { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .result-metadata .amount { grid-column: 1 / -1; }
 }
@@ -416,6 +425,8 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .sidebar-toggle { display: none; }
   .theme-options { grid-template-columns: 1fr; }
   .session-section { align-items: flex-start; flex-direction: column; }
+  .applied-profile { grid-template-columns: 1fr; }
+  .applied-profile > span { grid-row: auto; justify-self: start; }
   .hero { min-height: auto; grid-template-columns: 1fr; padding: 55px 0 70px; }
   .hero h1 { font-size: 43px; }
   .hero-preview { transform: none; }

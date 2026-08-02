@@ -1,11 +1,12 @@
 import json
 from datetime import time
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 from app.models.database import SessionLocal
 from app.models.search_profile import SearchProfile
 from app.core.auth import current_user
+from app.services.digest_service import matching_opportunities
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -83,6 +84,27 @@ def create_profile(payload: ProfilePayload, user: dict = Depends(current_user), 
     db.commit()
     db.refresh(row)
     return serialize(row)
+
+
+@router.get("/{profile_id}/matches")
+def profile_matches(
+    profile_id: int,
+    response: Response,
+    opportunity_type: str = Query("all", pattern="^(all|licitacion|compra_agil)$"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    user: dict = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    row = db.query(SearchProfile).filter(
+        SearchProfile.id == profile_id,
+        SearchProfile.owner_id == user["id"],
+    ).first()
+    if not row:
+        raise HTTPException(404, "Perfil no encontrado")
+    matches = matching_opportunities(row, limit=None, opportunity_type=opportunity_type)
+    response.headers["X-Total-Count"] = str(len(matches))
+    return matches[offset:offset + limit]
 
 
 @router.put("/{profile_id}")

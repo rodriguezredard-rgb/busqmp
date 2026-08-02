@@ -37,17 +37,20 @@ def format_amount(value, currency: str) -> str:
     return f"$ {formatted} {currency or 'CLP'}"
 
 
-def matching_opportunities(profile: SearchProfile, limit: int = 100):
+def matching_opportunities(profile: SearchProfile, limit: int | None = 100, offset: int = 0,
+                           opportunity_type: str | None = None):
     included = json.loads(profile.include_keywords or "[]") or [""]
     excluded = json.loads(profile.exclude_keywords or "[]")
     selected_categories = set(json.loads(profile.selected_categories or "[]"))
     rows = []
+    candidate_limit = 10000 if limit is None else max(500, (limit + offset) * 10)
+    selected_type = opportunity_type or profile.opportunity_type
     for keyword in included:
         rows.extend(list_opportunities(
-            keyword=keyword, opportunity_type=profile.opportunity_type,
+            keyword=keyword, opportunity_type=selected_type,
             region=profile.region, organization=profile.organization, status=profile.status,
             minimum_amount=profile.minimum_amount, maximum_amount=profile.maximum_amount,
-            limit=limit,
+            limit=candidate_limit,
         ))
     unique = {row["id"]: row for row in rows}
     def matches_category(row):
@@ -60,10 +63,12 @@ def matching_opportunities(profile: SearchProfile, limit: int = 100):
             for selected in selected_categories
         )
 
-    return [row for row in unique.values()
-            if matches_category(row)
-            and not any(matches_text_pattern(word, f"{row['title']} {row.get('description', '')}")
-                        for word in excluded)][:limit]
+    matches = [row for row in unique.values()
+               if matches_category(row)
+               and not any(matches_text_pattern(word, f"{row['title']} {row.get('description', '')}")
+                           for word in excluded)]
+    matches.sort(key=lambda item: str(item.get("publish_date") or item.get("closing_date") or ""), reverse=True)
+    return matches[offset:] if limit is None else matches[offset:offset + limit]
 
 
 def send_digest(profile: SearchProfile, rows: list[dict]):
