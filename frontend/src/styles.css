@@ -695,3 +695,8 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .app-shell .module-nav button small { display:none; }
 .app-shell .primary-nav { min-height:42px; }
 .app-shell .module-nav button div { align-content:center; }
+
+@media (max-width: 1180px) and (min-width: 721px) {
+  .app-shell .result-metadata { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell .result-metadata > .amount { grid-column: 1 / -1; }
+}

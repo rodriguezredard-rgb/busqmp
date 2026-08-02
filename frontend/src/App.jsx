@@ -240,7 +240,7 @@ function Dashboard({ session, onSessionChange }) {
         </form>}
         <div className="result-summary"><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div>
         <div className="results">{items.map((item) => <article className="result-card" key={item.id}>
-          <div className="result-card-head"><div className="result-labels"><span className="result-type">{item.opportunity_type === 'compra_agil' ? 'Compra Ágil' : 'Licitación'}</span><span className="result-code">{item.external_id}</span></div><span className="status-pill">{item.status || 'Sin estado'}</span></div>
+          <div className="result-card-head"><div className="result-labels"><span className="result-type">ID: {item.external_id}</span></div><span className="status-pill">{item.status || 'Sin estado'}</span></div>
           <h3 className="result-title">{item.title}</h3>
           <p className="result-organization"><span>{item.organization || 'Organismo no informado'}</span><span>{item.region || 'Región no informada'}</span></p>
           <div className="result-metadata"><span><small>Publicación</small>{displayDate(item.publish_date)}</span><span><small>Cierre</small>{displayDate(item.closing_date)}</span><span className="amount"><small>{item.opportunity_type === 'compra_agil' ? 'Monto disponible' : 'Monto estimado'}</small>{displayAmount(item)}</span></div>
