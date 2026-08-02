@@ -249,10 +249,9 @@ function Dashboard({ session, onSessionChange }) {
         <div className="result-summary"><div><strong>{total.toLocaleString('es-CL')} resultados</strong>{total > 0 && <span>Página {page + 1} de {Math.ceil(total / pageSize)}</span>}</div><label className="sort-control">Ordenar por<select value={sortOrder} onChange={(event) => changeSort(event.target.value)}><option value="recent">Más recientes</option><option value="oldest">Más antiguas</option><option value="amount_desc">Mayor monto</option><option value="amount_asc">Menor monto</option></select></label></div>
         <div className="results">{items.map((item) => <article className="result-card" key={item.id}>
           <div className="result-card-head"><div className="result-labels"><span className="result-type">ID: {item.external_id}</span></div><span className="status-pill">{item.status || 'Sin estado'}</span></div>
-          <h3 className="result-title">{item.title}</h3>
+          <h3 className="result-title">{item.url ? <a href={item.url} target="_blank" rel="noreferrer">{item.title}</a> : item.title}</h3>
           <p className="result-organization"><span>{item.organization || 'Organismo no informado'}</span><span>{item.region || 'Región no informada'}</span></p>
           <div className="result-metadata"><span><small>Publicación</small>{displayDate(item.publish_date)}</span><span><small>Cierre</small>{displayDate(item.closing_date)}</span><span className="amount"><small>{item.opportunity_type === 'compra_agil' ? 'Monto disponible' : 'Monto estimado'}</small>{displayAmount(item)}</span></div>
-          {item.url && <a className="result-link" href={item.url} target="_blank" rel="noreferrer">Ver oportunidad <span aria-hidden="true">↗</span></a>}
         </article>)}</div>
         {!loading && !items.length && <div className="empty-state">No hay resultados para los filtros seleccionados.</div>}
         {total > pageSize && <nav className="pagination" aria-label="Paginación"><button className="secondary" disabled={loading || page === 0} onClick={() => changeResultsPage(page - 1)}>Anterior</button><button disabled={loading || (page + 1) * pageSize >= total} onClick={() => changeResultsPage(page + 1)}>Siguiente</button></nav>}
