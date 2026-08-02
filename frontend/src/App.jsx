@@ -8,7 +8,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const emptyProfile = {
   name: '', industry: '', include_keywords: [], exclude_keywords: [],
   selected_categories: [],
-  opportunity_type: 'all', region: '', organization: '', status: '',
+  opportunity_type: 'licitacion', region: '', organization: '', status: '',
   minimum_amount: null, maximum_amount: null, recipient_email: '',
   delivery_time: '09:00', timezone: 'America/Santiago', enabled: true,
 };
@@ -112,8 +112,8 @@ function Dashboard({ session, onSessionChange }) {
     try {
       const availableProfiles = profiles.length ? profiles : await loadProfiles();
       const selected = availableProfiles.find((profile) => String(profile.id) === String(searchProfileId)
-        && (profile.opportunity_type === 'all' || profile.opportunity_type === module));
-      const fallback = availableProfiles.find((profile) => profile.opportunity_type === 'all' || profile.opportunity_type === module);
+        && profile.opportunity_type === module);
+      const fallback = availableProfiles.find((profile) => profile.opportunity_type === module);
       if (selected || fallback) await searchSavedProfile(selected || fallback, module, 0);
       else { setSearchProfileId('manual'); await search(null, 0, module); }
     } catch (error) { setMessage(error.message); }
@@ -230,7 +230,7 @@ function Dashboard({ session, onSessionChange }) {
 
       {!isSettings && <>
       <section className="panel module-panel"><div className="section-heading"><div><h2>Buscar {isAgile ? 'compras ágiles' : 'licitaciones'}</h2><p>Filtra los registros guardados en la base de oportunidades.</p></div><span className="module-chip">{isAgile ? 'Compra Ágil' : 'Licitación'}</span></div>
-        <div className="saved-search-selector"><label>Tipo de compra<select value={activeModule} onChange={(event) => switchModule(event.target.value)}><option value="licitacion">Licitaciones</option><option value="compra_agil">Compras Ágiles</option></select></label><label>Búsqueda aplicada<select value={searchProfileId} onChange={(event) => chooseSearchProfile(event.target.value)}><option value="manual">Búsqueda nueva en {isAgile ? 'Compras Ágiles' : 'Licitaciones'}</option>{profiles.filter((profile) => profile.opportunity_type === 'all' || profile.opportunity_type === activeModule).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>{searchProfileId !== 'manual' && <div className="applied-profile"><span>Filtros configurados</span>{(() => { const profile = profiles.find((item) => String(item.id) === searchProfileId); return profile ? <><b>{profile.name}</b><small>{[...profile.include_keywords, ...profile.selected_categories.map((code) => `Rubro ${code}`), profile.region, profile.organization].filter(Boolean).slice(0, 6).join(' · ') || 'Todos los registros'}</small></> : null; })()}</div>}</div>
+        <div className="saved-search-selector"><label>Tipo de compra<select value={activeModule} onChange={(event) => switchModule(event.target.value)}><option value="licitacion">Licitaciones</option><option value="compra_agil">Compras Ágiles</option></select></label><label>Búsqueda aplicada<select value={searchProfileId} onChange={(event) => chooseSearchProfile(event.target.value)}><option value="manual">Búsqueda nueva en {isAgile ? 'Compras Ágiles' : 'Licitaciones'}</option>{profiles.filter((profile) => profile.opportunity_type === activeModule).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>{searchProfileId !== 'manual' && <div className="applied-profile"><span>Filtros configurados</span>{(() => { const profile = profiles.find((item) => String(item.id) === searchProfileId); return profile ? <><b>{profile.name}</b><small>{[...profile.include_keywords, ...profile.selected_categories.map((code) => `Rubro ${code}`), profile.region, profile.organization].filter(Boolean).slice(0, 6).join(' · ') || 'Todos los registros'}</small></> : null; })()}</div>}</div>
         {searchProfileId === 'manual' && <form className="search-filters" onSubmit={(event) => search(event, 0)}>
           <label className="wide">Palabra clave<input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Ej. servicio, mantención, equipos" /></label>
           <label>Región<input value={searchFilters.region} onChange={(e) => setSearch('region', e.target.value)} /></label>
@@ -264,12 +264,12 @@ function Dashboard({ session, onSessionChange }) {
         <h2>{editingId ? 'Editar búsqueda programada' : 'Nueva búsqueda programada'}</h2>
         <p className="panel-intro">Guarda un rubro y define qué palabras deben aparecer y cuáles deben descartarse.</p>
         <form onSubmit={saveProfile} className="grid">
-          <label>Nombre del perfil<input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej. Servicios eléctricos" /></label>
+          <label>Nombre de la búsqueda<input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej. Servicios eléctricos" /></label>
           <label>Rubro<input required value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Ej. Electricidad industrial" /></label>
           <label className="wide">Palabras que debe buscar<KeywordTagInput key={`${editingId ?? 'new'}-include`} value={form.include_keywords} onChange={(value) => set('include_keywords', value)} placeholder="Ej. vet*, cableado, mantención" /><small>Presiona coma o Enter para agregar cada tag. Usa * para incluir variantes: vet* encuentra veterinaria y veterinarios.</small></label>
           <label className="wide">Palabras que debe excluir<KeywordTagInput key={`${editingId ?? 'new'}-exclude`} value={form.exclude_keywords} onChange={(value) => set('exclude_keywords', value)} placeholder="Ej. arriend*, usado" tone="exclude" /><small>Estas palabras y sus variantes no aparecerán en los resultados enviados.</small></label>
           <CategoryPicker categories={categories} selected={form.selected_categories} search={categorySearch} onSearch={setCategorySearch} toggle={toggleCategory} />
-          <label>Tipo<select value={form.opportunity_type} onChange={(e) => set('opportunity_type', e.target.value)}><option value="all">Todas</option><option value="licitacion">Licitación</option><option value="compra_agil">Compra ágil</option></select></label>
+          <label>Tipo de compra<select value={form.opportunity_type} onChange={(e) => set('opportunity_type', e.target.value)}>{form.opportunity_type === 'all' && <option value="all" disabled>Ambos (configuración anterior)</option>}<option value="licitacion">Licitación</option><option value="compra_agil">Compra Ágil</option></select></label>
           <label>Región<input value={form.region} onChange={(e) => set('region', e.target.value)} /></label>
           <label>Organismo<input value={form.organization} onChange={(e) => set('organization', e.target.value)} /></label>
           <label>Estado<input value={form.status} onChange={(e) => set('status', e.target.value)} /></label>
@@ -283,7 +283,7 @@ function Dashboard({ session, onSessionChange }) {
       </section>
 
       <section className="panel"><h2>Mis búsquedas programadas</h2><div className="profiles">
-        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p><span className="profile-industry">{profile.industry}</span> · {profile.delivery_time} · {profile.recipient_email}</p><small><b>Incluye:</b> {profile.include_keywords.join(', ') || 'Todas'} · <b>Excluye:</b> {profile.exclude_keywords.join(', ') || 'Ninguna'} · <b>Rubros:</b> {profile.selected_categories?.length || 0} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
+        {profiles.map((profile) => <article key={profile.id}><div><strong>{profile.name}</strong><p><span className="profile-industry">{profile.opportunity_type === 'compra_agil' ? 'Compra Ágil' : profile.opportunity_type === 'licitacion' ? 'Licitación' : 'Ambos (anterior)'}</span> · {profile.industry} · {profile.delivery_time} · {profile.recipient_email}</p><small><b>Incluye:</b> {profile.include_keywords.join(', ') || 'Todas'} · <b>Excluye:</b> {profile.exclude_keywords.join(', ') || 'Ninguna'} · <b>Rubros:</b> {profile.selected_categories?.length || 0} · {profile.enabled ? 'Activa' : 'Pausada'}</small></div><div><button onClick={() => edit(profile)}>Editar</button><button className="danger" onClick={() => remove(profile.id)}>Eliminar</button></div></article>)}
         {!profiles.length && <p>Aún no tienes búsquedas programadas.</p>}
       </div></section>
       </>}
