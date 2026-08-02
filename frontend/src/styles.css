@@ -536,3 +536,70 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .landing .preview-row em { display: none; }
   .landing .features, .landing .landing-footer { width: calc(100% - 28px); }
 }
+
+/* Readable type scale and task-first navigation */
+.app-shell .brand strong { font-size: 14px; }
+.app-shell .brand small, .app-shell .module-nav small { font-size: 11px; }
+.app-shell .nav-caption { font-size: 10px; }
+.app-shell .module-nav button strong { font-size: 13px; }
+.app-shell .sidebar-note { font-size: 11px; }
+.sidebar-account strong { font-size: 12px; }
+.sidebar-account small { font-size: 10px; }
+.app-shell .page-header p { font-size: 14px; }
+.app-shell .eyebrow { font-size: 10px; }
+.app-shell .result-count { font-size: 11px; }
+.app-shell .result-count strong { font-size: 15px; }
+.app-shell h2 { font-size: 18px; }
+.app-shell .section-heading p, .app-shell .panel-intro { font-size: 13px; }
+.app-shell .module-chip { font-size: 10px; }
+.app-shell label { font-size: 12px; }
+.app-shell input, .app-shell select { min-height: 38px; font-size: 13px; }
+.app-shell button { font-size: 12px; }
+.app-shell .result-summary { font-size: 13px; }
+.app-shell .result-summary span { font-size: 12px; }
+.app-shell .result-type, .app-shell .status-pill { font-size: 10px; }
+.app-shell .result-code { font-size: 11px; }
+.app-shell .result-title { font-size: 16px; }
+.app-shell .result-organization { font-size: 12px; }
+.app-shell .result-metadata > span, .app-shell .result-metadata > span.amount { font-size: 12px; }
+.app-shell .result-metadata small { font-size: 9px; }
+.app-shell .result-link { font-size: 12px; }
+
+.module-nav .inline-caption { margin: 17px 9px 5px; }
+.market-nav-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.app-shell .market-nav-row button { min-width: 0; display: grid; justify-items: center; gap: 2px; padding: 7px 4px; text-align: center; }
+.app-shell .market-nav-row button > span { width: 24px; height: 20px; font-size: 10px; }
+.app-shell .market-nav-row button div { min-width: 0; text-align: center; }
+.app-shell .market-nav-row button strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .primary-nav { min-height: 48px; margin-bottom: 2px; }
+.app-shell .primary-nav > span { color: #fff; background: #23856f; }
+.app-shell .primary-nav.active > span { color: #fff; background: #23856f; }
+.sidebar-collapsed .market-nav-row { grid-template-columns: 1fr; }
+.sidebar-collapsed .inline-caption { display: none; }
+
+.landing-nav a, .landing-nav button { font-size: 13px; }
+.landing-brand strong { font-size: 15px; }
+.landing .hero-kicker { font-size: 10px; }
+.landing .hero-copy > p { font-size: 18px; }
+.landing .hero-actions button, .landing .hero-actions a { font-size: 13px; }
+.landing .hero-trust { font-size: 12px; }
+.landing .preview-bar span { font-size: 10px; }
+.landing .hero-preview > small { font-size: 9px; }
+.landing .hero-preview > strong { font-size: 20px; }
+.landing .preview-metric b { font-size: 19px; }
+.landing .preview-metric span { font-size: 11px; }
+.landing .preview-row b { font-size: 13px; }
+.landing .preview-row small { font-size: 11px; }
+.landing .preview-row em { font-size: 9px; }
+.landing .features > div small, .landing .features article span { font-size: 10px; }
+.landing .features > div p, .landing .features p { font-size: 13px; }
+.landing .features h3 { font-size: 15px; }
+.landing .landing-footer { font-size: 11px; }
+.landing .auth-card > p, .landing .auth-card label, .landing .auth-card form > button, .landing .auth-switch { font-size: 12px; }
+.landing .auth-card input { font-size: 13px; }
+
+@media (max-width: 720px) {
+  .market-nav-row { display: contents; }
+  .app-shell .market-nav-row button { display: flex; justify-content: center; }
+  .module-nav .inline-caption { display: none; }
+}

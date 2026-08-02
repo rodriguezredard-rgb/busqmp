@@ -31,8 +31,8 @@ function displayAmount(item) {
 }
 
 function Dashboard({ session, onSessionChange }) {
-  const [activeModule, setActiveModule] = useState(session.recovery ? 'settings' : 'licitacion');
-  const [settingsPage, setSettingsPage] = useState(session.recovery ? 'account' : 'menu');
+  const [activeModule, setActiveModule] = useState('settings');
+  const [settingsPage, setSettingsPage] = useState(session.recovery ? 'account' : 'profiles');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('busqmp_theme') || 'system');
   const [items, setItems] = useState([]);
@@ -110,7 +110,7 @@ function Dashboard({ session, onSessionChange }) {
   }
 
   useEffect(() => {
-    search(null, 0, 'licitacion').catch((error) => setMessage(error.message));
+    if (!session.recovery) openSettings('profiles');
   }, []);
 
   async function saveProfile(event) {
@@ -155,6 +155,7 @@ function Dashboard({ session, onSessionChange }) {
     : [...form.selected_categories, code]);
 
   async function openSettings(pageName) {
+    setActiveModule('settings');
     setSettingsPage(pageName); setMessage('');
     if (pageName === 'profiles') {
       const requests = [loadProfiles()];
@@ -178,11 +179,15 @@ function Dashboard({ session, onSessionChange }) {
   return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
       <div className="brand"><span>BO</span><div><strong>Oportunidades</strong><small>Mercado Público</small></div><button className="sidebar-toggle" aria-label={sidebarCollapsed ? 'Mostrar menú' : 'Ocultar menú'} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>{sidebarCollapsed ? '›' : '‹'}</button></div>
-      <small className="nav-caption">Espacio de trabajo</small>
+      <small className="nav-caption">Principal</small>
       <nav className="module-nav" aria-label="Módulos de oportunidades">
-        <button className={activeModule === 'licitacion' ? 'active' : ''} onClick={() => switchModule('licitacion')}><span>⌕</span><div><strong>Licitaciones</strong><small>Procesos activos</small></div></button>
-        <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>↗</span><div><strong>Compras Ágiles</strong><small>Oportunidades rápidas</small></div></button>
-        <button className={activeModule === 'settings' ? 'active' : ''} onClick={() => switchModule('settings')}><span>⚙</span><div><strong>Settings</strong><small>Cuenta y preferencias</small></div></button>
+        <button className={`primary-nav ${isProfiles ? 'active' : ''}`} onClick={() => openSettings('profiles')}><span>＋</span><div><strong>Configurar búsquedas</strong><small>Recibe oportunidades por correo</small></div></button>
+        <small className="nav-caption inline-caption">Explorar oportunidades</small>
+        <div className="market-nav-row">
+          <button className={activeModule === 'licitacion' ? 'active' : ''} onClick={() => switchModule('licitacion')}><span>L</span><div><strong>Licitaciones</strong></div></button>
+          <button className={activeModule === 'compra_agil' ? 'active' : ''} onClick={() => switchModule('compra_agil')}><span>CA</span><div><strong>Compra Ágil</strong></div></button>
+        </div>
+        <button className={activeModule === 'settings' && !isProfiles ? 'active' : ''} onClick={() => switchModule('settings')}><span>⚙</span><div><strong>Settings</strong><small>Cuenta y preferencias</small></div></button>
       </nav>
       <div className="sidebar-note"><span className="live-dot" aria-hidden="true" />Sincronización automática activa</div>
       <button className="sidebar-account" onClick={() => switchModule('settings')}><span>{session.user?.email?.slice(0, 1).toUpperCase() || 'U'}</span><div><strong>{session.user?.email || 'Mi cuenta'}</strong><small>Administrar cuenta</small></div></button>
