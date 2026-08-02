@@ -680,6 +680,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .app-shell .settings-menu button:hover:not(:disabled) { border-color:#aaa; background:#f7f7f7; }
 .app-shell .settings-back { margin-left:max(0px, calc((100% - 760px)/2)); border:1px solid #c9c9c9; background:#fff; }
 .app-shell .category-picker { border-color:#c9c9c9; border-radius:10px; background:#fafafa; }
+.category-search-controls { display:grid; grid-template-columns:minmax(0,1fr) 190px; gap:8px; }
 .app-shell .category-tree details { border-color:#d6d6d6; border-radius:8px; }
 .app-shell .keyword-tag-input { border-color:#bfbfbf; border-radius:8px; }
 .app-shell .keyword-tag { background:#006e52; }
@@ -710,4 +711,5 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .app-shell .result-summary > div { display:grid; gap:2px; }
   .app-shell .sort-control { width:100%; justify-content:space-between; }
   .app-shell .sort-control select { flex:1; }
+  .category-search-controls { grid-template-columns:1fr; }
 }

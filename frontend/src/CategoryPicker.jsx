@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 const SEGMENT_NAMES = {
   10: 'Material vegetal, animal y accesorios', 11: 'Minerales, textiles y materiales no comestibles',
@@ -75,6 +75,17 @@ function selectionValue(code) {
   return code;
 }
 
+function normalized(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function matchesBeginning(category, query) {
+  const terms = normalized(query).split(/\s+/).filter(Boolean);
+  const code = String(category.code || '');
+  const words = normalized(category.name).split(/[^a-z0-9]+/).filter(Boolean);
+  return terms.every((term) => code.startsWith(term) || words.some((word) => word.startsWith(term)));
+}
+
 function treeBranchName(tree, prefix) {
   const segment = tree.get(prefix.slice(0, 2));
   if (prefix.length === 2) return segment?.name;
@@ -91,9 +102,11 @@ function SelectButton({ prefix, selected, toggle }) {
 }
 
 export default function CategoryPicker({ categories, selected, search, onSearch, toggle }) {
+  const [levelFilter, setLevelFilter] = useState('all');
   const tree = useMemo(() => makeTree(categories), [categories]);
   const query = search.trim().toLowerCase();
-  const matches = query ? categories.filter((item) => `${item.code} ${item.name}`.toLowerCase().includes(query)) : [];
+  const matches = query ? categories.filter((item) => matchesBeginning(item, query)
+    && (levelFilter === 'all' || categoryLevel(String(item.code)) === levelFilter)) : [];
   const selectedItems = selected.map((value) => {
     const exact = categories.find((item) => item.code === value);
     if (exact) return { value, name: exact.name.split('/').pop().trim(), level: categoryLevel(String(exact.code)) };
@@ -102,8 +115,8 @@ export default function CategoryPicker({ categories, selected, search, onSearch,
   });
 
   return <fieldset className="category-picker wide">
-    <legend>Rubros de Mercado Público</legend>
-    <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Buscar transversalmente por nombre o código ONU" />
+    <legend>Categorías de Mercado Público</legend>
+    <div className="category-search-controls"><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Buscar por inicio de palabra o código ONU" /><select value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)} aria-label="Nivel de categoría"><option value="all">Todos los niveles</option><option value="Rubro">Rubros</option><option value="Familia">Familias</option><option value="Clase">Clases</option><option value="Producto específico">Productos específicos</option></select></div>
     {selectedItems.length > 0 && <div className="selected-categories" aria-label="Rubros seleccionados">{selectedItems.map((item) => <button key={item.value} type="button" className="selected-tag" onClick={() => toggle(item.value)} title="Quitar rubro"><span><small>{item.level}</small>{item.name}</span><b aria-hidden="true">×</b></button>)}</div>}
 
     {query ? <div className="category-search-results">
