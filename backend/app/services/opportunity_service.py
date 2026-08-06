@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from app.models.database import SessionLocal, initialize_database
 import json
 from app.models.market_data import CompraAgil, LicitacionActiva, OpportunityCategory
@@ -63,10 +63,31 @@ def _agile_dict(row):
         "title": row.nombre, "description": row.descripcion,
         "organization": row.organismo, "category": "", "category_codes": json.loads(row.category_codes or "[]"), "amount": float(row.monto) if row.monto is not None else None,
         "currency": row.moneda, "publish_date": row.fecha_publicacion,
-        "award_date": None, "closing_date": row.fecha_cierre,
+        "award_date": None,
+        "closing_date": row.fecha_segundo_cierre or row.fecha_primer_cierre or row.fecha_cierre,
+        "first_closing_date": row.fecha_primer_cierre or row.fecha_cierre,
+        "second_closing_date": row.fecha_segundo_cierre,
         "status": row.estado, "region": row.region,
         "url": f"https://buscador.mercadopublico.cl/ficha?code={row.codigo}",
     }
+
+
+def _agile_closing_dates(data: dict):
+    fechas = data.get("fechas") or {}
+    primer_cierre = _datetime(
+        fechas.get("fecha_primer_cierre")
+        or fechas.get("fecha_cierre_primer_llamado")
+        or fechas.get("primer_cierre")
+        or data.get("fecha_primer_cierre")
+    )
+    segundo_cierre = _datetime(
+        fechas.get("fecha_segundo_cierre")
+        or fechas.get("fecha_cierre_segundo_llamado")
+        or fechas.get("segundo_cierre")
+        or data.get("fecha_segundo_cierre")
+    )
+    cierre = _datetime(fechas.get("fecha_cierre") or data.get("fecha_cierre"))
+    return primer_cierre or cierre, segundo_cierre, cierre
 
 
 def _compra_agil_record(data: dict):
@@ -75,6 +96,7 @@ def _compra_agil_record(data: dict):
         return None, None
     estado = data.get("estado") or {}
     fechas = data.get("fechas") or {}
+    primer_cierre, segundo_cierre, cierre = _agile_closing_dates(data)
     montos = data.get("montos") or data.get("presupuesto") or {}
     institucion = data.get("institucion") or {}
     descripcion = str(data.get("descripcion") or "")
@@ -89,7 +111,9 @@ def _compra_agil_record(data: dict):
         "moneda": str(montos.get("moneda") or "CLP"),
         "monto": montos.get("monto_disponible_clp") or montos.get("monto_disponible"),
         "fecha_publicacion": _datetime(fechas.get("fecha_publicacion")),
-        "fecha_cierre": _datetime(fechas.get("fecha_cierre")),
+        "fecha_cierre": cierre,
+        "fecha_primer_cierre": primer_cierre or cierre,
+        "fecha_segundo_cierre": segundo_cierre,
         "fecha_ultimo_cambio": _datetime(fechas.get("fecha_ultimo_cambio")),
         "search_text": " ".join([codigo, nombre, descripcion, str(institucion.get("organismo_comprador") or "")]).lower(),
         "source_detail": data, "updated_at": datetime.now(timezone.utc),
@@ -124,6 +148,29 @@ def save_compras_agiles(items: list[dict]) -> int:
 
 def save_compra_agil(data: dict) -> None:
     save_compras_agiles([data])
+
+
+def backfill_agile_closing_dates() -> int:
+    """Completa las nuevas columnas desde el JSON ya almacenado."""
+    initialize_database()
+    db = SessionLocal()
+    try:
+        rows = db.query(CompraAgil).filter(CompraAgil.fecha_primer_cierre.is_(None)).all()
+        updated = 0
+        for row in rows:
+            primer_cierre, segundo_cierre, cierre = _agile_closing_dates(row.source_detail or {})
+            row.fecha_primer_cierre = primer_cierre or row.fecha_cierre
+            row.fecha_segundo_cierre = segundo_cierre
+            if cierre and not row.fecha_cierre:
+                row.fecha_cierre = cierre
+            updated += 1
+        db.commit()
+        return updated
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def _category_pairs(detail: dict, source: str) -> list[tuple[str, str]]:
@@ -282,14 +329,28 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
         query_limit = 10000 if sort != "recent" else limit + offset
         pattern = _keyword_pattern(keyword)
         if opportunity_type in ("all", "licitacion"):
-            query = db.query(LicitacionActiva).filter(LicitacionActiva.activa.is_(True))
+            now = datetime.now(timezone.utc)
+            query = db.query(LicitacionActiva).filter(
+                LicitacionActiva.activa.is_(True),
+                ~func.lower(LicitacionActiva.estado).like("%cerrad%"),
+                or_(LicitacionActiva.fecha_cierre.is_(None), LicitacionActiva.fecha_cierre > now),
+            )
             if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(LicitacionActiva.region.ilike(f"%{region}%"))
             if organization: query = query.filter(LicitacionActiva.organismo.ilike(f"%{organization}%"))
             if status: query = query.filter(LicitacionActiva.estado.ilike(f"%{status}%"))
             results.extend(_licitacion_dict(row) for row in query.order_by(LicitacionActiva.fecha_cierre.asc()).limit(query_limit).all())
         if opportunity_type in ("all", "compra_agil"):
-            query = db.query(CompraAgil)
+            now = datetime.now(timezone.utc)
+            effective_closing = func.coalesce(
+                CompraAgil.fecha_segundo_cierre,
+                CompraAgil.fecha_primer_cierre,
+                CompraAgil.fecha_cierre,
+            )
+            query = db.query(CompraAgil).filter(
+                ~func.lower(CompraAgil.estado).like("%cerrad%"),
+                or_(effective_closing.is_(None), effective_closing > now),
+            )
             if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(CompraAgil.region.ilike(f"%{region}%"))
             if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))
@@ -322,14 +383,28 @@ def count_opportunities(keyword="", opportunity_type="all", region="", organizat
         total = 0
         pattern = _keyword_pattern(keyword)
         if opportunity_type in ("all", "licitacion"):
-            query = db.query(LicitacionActiva).filter(LicitacionActiva.activa.is_(True))
+            now = datetime.now(timezone.utc)
+            query = db.query(LicitacionActiva).filter(
+                LicitacionActiva.activa.is_(True),
+                ~func.lower(LicitacionActiva.estado).like("%cerrad%"),
+                or_(LicitacionActiva.fecha_cierre.is_(None), LicitacionActiva.fecha_cierre > now),
+            )
             if keyword: query = query.filter(LicitacionActiva.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(LicitacionActiva.region.ilike(f"%{region}%"))
             if organization: query = query.filter(LicitacionActiva.organismo.ilike(f"%{organization}%"))
             if status: query = query.filter(LicitacionActiva.estado.ilike(f"%{status}%"))
             total += query.count()
         if opportunity_type in ("all", "compra_agil"):
-            query = db.query(CompraAgil)
+            now = datetime.now(timezone.utc)
+            effective_closing = func.coalesce(
+                CompraAgil.fecha_segundo_cierre,
+                CompraAgil.fecha_primer_cierre,
+                CompraAgil.fecha_cierre,
+            )
+            query = db.query(CompraAgil).filter(
+                ~func.lower(CompraAgil.estado).like("%cerrad%"),
+                or_(effective_closing.is_(None), effective_closing > now),
+            )
             if keyword: query = query.filter(CompraAgil.search_text.ilike(pattern, escape="\\"))
             if region: query = query.filter(CompraAgil.region.ilike(f"%{region}%"))
             if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))

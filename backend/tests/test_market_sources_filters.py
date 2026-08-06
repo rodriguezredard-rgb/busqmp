@@ -4,6 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.market_sources import MarketSourcesService
+from app.services.opportunity_service import _compra_agil_record
 
 
 def test_build_params_includes_mercado_publico_filters():
@@ -44,3 +45,17 @@ def test_build_params_includes_mercado_publico_filters():
     assert params["pagina"] == 2
     assert params["cantidad"] == 25
     assert params["orden"] == "fecha_publicacion_desc"
+
+
+def test_compra_agil_reads_first_and_second_closing_dates():
+    code, values = _compra_agil_record({
+        "codigo": "123-1-COT26",
+        "fechas": {
+            "fecha_cierre_primer_llamado": "2026-08-07T15:00:00-04:00",
+            "fecha_cierre_segundo_llamado": "2026-08-10T15:00:00-04:00",
+        },
+    })
+
+    assert code == "123-1-COT26"
+    assert values["fecha_primer_cierre"].day == 7
+    assert values["fecha_segundo_cierre"].day == 10

@@ -3,7 +3,8 @@ name: Sincronizar oportunidades
 on:
   workflow_dispatch:
   schedule:
-    - cron: "7,37 * * * *"
+    # GitHub advierte que la cola se satura cerca del inicio de cada hora.
+    - cron: "17,47 * * * *"
 
 permissions:
   contents: read
@@ -11,7 +12,7 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 4
     steps:
       - name: Actualizar licitaciones y compras ágiles
         env:
@@ -20,6 +21,8 @@ jobs:
         run: |
           test -n "$BACKEND_URL"
           test -n "$CRON_SECRET"
-          curl --fail-with-body --location --retry 2 --max-time 240 \
+          curl --fail-with-body --location --show-error \
+            --connect-timeout 15 --max-time 55 \
+            --retry 4 --retry-delay 5 --retry-max-time 210 --retry-all-errors \
             -X POST "$BACKEND_URL/cron/daily-digests" \
             -H "Authorization: Bearer $CRON_SECRET"

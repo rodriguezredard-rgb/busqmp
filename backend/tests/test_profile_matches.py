@@ -2,7 +2,7 @@ import json
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from app.services.digest_service import matching_opportunities
+from app.services.digest_service import matching_opportunities, send_digest
 
 
 def test_profile_matches_reuses_keywords_categories_and_exclusions():
@@ -36,3 +36,28 @@ def test_profile_matches_sorts_amounts_and_leaves_unknown_amounts_last():
     with patch("app.services.digest_service.list_opportunities", return_value=rows):
         matches = matching_opportunities(profile, limit=None, sort="amount_desc")
     assert [row["id"] for row in matches] == ["large", "small", "unknown"]
+
+
+def test_agile_digest_labels_first_and_second_closing_dates():
+    profile = SimpleNamespace(
+        name="Prueba", recipient_email="destino@example.com", timezone="America/Santiago",
+    )
+    rows = [{
+        "opportunity_type": "compra_agil", "title": "Compra de prueba",
+        "external_id": "123-1-COT26", "organization": "Organismo",
+        "publish_date": "2026-08-06T10:00:00-04:00",
+        "first_closing_date": "2026-08-07T15:00:00-04:00",
+        "second_closing_date": "2026-08-10T15:00:00-04:00",
+        "amount": 1000, "currency": "CLP", "url": "https://example.com",
+    }]
+
+    with patch("app.services.digest_service.SMTP_HOST", "smtp.example.com"), \
+         patch("app.services.digest_service.SMTP_FROM", "origen@example.com"), \
+         patch("app.services.digest_service.smtplib.SMTP") as smtp:
+        send_digest(profile, rows)
+
+    message = smtp.return_value.__enter__.return_value.send_message.call_args.args[0]
+    body = message.get_content()
+    assert "Primer cierre: 07-08-2026 15:00" in body
+    assert "Segundo cierre: 10-08-2026 15:00" in body
+    assert "  Cierre:" not in body

@@ -86,13 +86,21 @@ def send_digest(profile: SearchProfile, rows: list[dict]):
     for row in rows:
         amount_label = "Monto estimado" if row.get("opportunity_type") == "licitacion" else "Monto disponible"
         type_label = "Licitación" if row.get("opportunity_type") == "licitacion" else "Compra Ágil"
+        closing_lines = (
+            [
+                f"  Primer cierre: {format_date(row.get('first_closing_date'), profile.timezone)}",
+                f"  Segundo cierre: {format_date(row.get('second_closing_date'), profile.timezone)}",
+            ]
+            if row.get("opportunity_type") == "compra_agil"
+            else [f"  Cierre: {format_date(row.get('closing_date'), profile.timezone)}"]
+        )
         lines.extend([
             f"• {row['title']}",
             f"  Tipo: {type_label}",
             f"  Código: {row.get('external_id') or 'No informado'}",
             f"  Organismo: {row.get('organization') or 'No informado'}",
             f"  Publicación: {format_date(row.get('publish_date'), profile.timezone)}",
-            f"  Cierre: {format_date(row.get('closing_date'), profile.timezone)}",
+            *closing_lines,
             f"  {amount_label}: {format_amount(row.get('amount'), row.get('currency'))}",
             f"  Enlace: {row.get('url') or 'No informado'}",
             "",

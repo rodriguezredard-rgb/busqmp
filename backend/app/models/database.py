@@ -28,7 +28,12 @@ def initialize_database() -> None:
         Base.metadata.create_all(bind=engine)
         additions = {
             "licitaciones_activas": {"category_codes": "TEXT NOT NULL DEFAULT '[]'", "category_names": "TEXT NOT NULL DEFAULT '[]'"},
-            "compras_agiles": {"category_codes": "TEXT NOT NULL DEFAULT '[]'", "category_names": "TEXT NOT NULL DEFAULT '[]'"},
+            "compras_agiles": {
+                "category_codes": "TEXT NOT NULL DEFAULT '[]'",
+                "category_names": "TEXT NOT NULL DEFAULT '[]'",
+                "fecha_primer_cierre": "TIMESTAMP WITH TIME ZONE",
+                "fecha_segundo_cierre": "TIMESTAMP WITH TIME ZONE",
+            },
             "busqmp_search_profiles": {"selected_categories": "TEXT NOT NULL DEFAULT '[]'", "owner_id": "VARCHAR(64)"},
         }
         inspector = inspect(engine)

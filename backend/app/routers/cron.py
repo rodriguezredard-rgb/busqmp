@@ -4,7 +4,7 @@ from app.models.database import SessionLocal, initialize_database
 from app.services.digest_service import run_due_digests
 from app.services.market_sources import MarketSourcesService
 from app.services.opportunity_service import (
-    list_unenriched_codes, save_compra_agil, save_compras_agiles,
+    backfill_agile_closing_dates, list_unenriched_codes, save_compras_agiles,
     save_opportunity_categories, sync_active_licitaciones,
 )
 
@@ -16,6 +16,7 @@ def daily_digests(authorization: str | None = Header(default=None)):
     if not CRON_SECRET or authorization != f"Bearer {CRON_SECRET}":
         raise HTTPException(401, "No autorizado")
     initialize_database()
+    backfill_agile_closing_dates()
     synchronized = {"licitaciones_activas": 0, "compras_agiles": 0}
     if API_TICKET:
         service = MarketSourcesService(API_TICKET)
@@ -25,12 +26,15 @@ def daily_digests(authorization: str | None = Header(default=None)):
         # perder cambios si GitHub o Mercado Público se retrasan. El upsert
         # hace que el solapamiento sea seguro.
         agile_items = service.fetch_compra_agil(minutes=60)
-        for item in agile_items:
-            save_compra_agil(item)
-        synchronized["compras_agiles"] = len(agile_items)
+        synchronized["compras_agiles"] = save_compras_agiles(agile_items)
     db = SessionLocal()
     try:
-        return {"synchronized": synchronized, "results": run_due_digests(db)}
+        results = run_due_digests(db)
+        response = {"synchronized": synchronized, "results": results}
+        failed = [item for item in results if item.get("status") in {"error", "invalid_timezone"}]
+        if failed:
+            raise HTTPException(502, detail=response)
+        return response
     finally:
         db.close()
 

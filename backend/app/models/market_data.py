@@ -57,6 +57,8 @@ class CompraAgil(Base):
     monto = Column(Numeric, nullable=True)
     fecha_publicacion = Column(DateTime(timezone=True), nullable=True)
     fecha_cierre = Column(DateTime(timezone=True), nullable=True)
+    fecha_primer_cierre = Column(DateTime(timezone=True), nullable=True)
+    fecha_segundo_cierre = Column(DateTime(timezone=True), nullable=True)
     fecha_ultimo_cambio = Column(DateTime(timezone=True), nullable=True, index=True)
     search_text = Column(Text, nullable=False, default="", index=True)
     source_detail = Column(JSON, nullable=False, default=dict)
