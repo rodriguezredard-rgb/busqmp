@@ -41,6 +41,7 @@ def test_profile_matches_sorts_amounts_and_leaves_unknown_amounts_last():
 def test_agile_digest_labels_first_and_second_closing_dates():
     profile = SimpleNamespace(
         name="Prueba", recipient_email="destino@example.com", timezone="America/Santiago",
+        opportunity_type="compra_agil",
     )
     rows = [{
         "opportunity_type": "compra_agil", "title": "Compra de prueba",
@@ -61,3 +62,4 @@ def test_agile_digest_labels_first_and_second_closing_dates():
     assert "Primer cierre: 07-08-2026 15:00" in body
     assert "Segundo cierre: 10-08-2026 15:00" in body
     assert "  Cierre:" not in body
+    assert message["Subject"] == "Compras Ágiles — Prueba — 1 coincidencias"

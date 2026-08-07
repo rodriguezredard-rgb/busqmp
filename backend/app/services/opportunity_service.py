@@ -356,8 +356,6 @@ def list_opportunities(keyword="", opportunity_type="all", region="", organizati
             if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))
             if status:
                 query = query.filter(CompraAgil.estado.ilike(f"%{status}%"))
-            else:
-                query = query.filter(CompraAgil.estado == "publicada")
             if minimum_amount is not None: query = query.filter(CompraAgil.monto >= minimum_amount)
             if maximum_amount is not None: query = query.filter(CompraAgil.monto <= maximum_amount)
             results.extend(_agile_dict(row) for row in query.order_by(CompraAgil.fecha_ultimo_cambio.desc()).limit(query_limit).all())
@@ -410,8 +408,6 @@ def count_opportunities(keyword="", opportunity_type="all", region="", organizat
             if organization: query = query.filter(CompraAgil.organismo.ilike(f"%{organization}%"))
             if status:
                 query = query.filter(CompraAgil.estado.ilike(f"%{status}%"))
-            else:
-                query = query.filter(CompraAgil.estado == "publicada")
             if minimum_amount is not None: query = query.filter(CompraAgil.monto >= minimum_amount)
             if maximum_amount is not None: query = query.filter(CompraAgil.monto <= maximum_amount)
             total += query.count()

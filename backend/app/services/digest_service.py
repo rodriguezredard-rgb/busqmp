@@ -106,7 +106,11 @@ def send_digest(profile: SearchProfile, rows: list[dict]):
             "",
         ])
     message = EmailMessage()
-    message["Subject"] = f"{len(rows)} oportunidades — {profile.name}"
+    profile_type = {
+        "licitacion": "Licitaciones",
+        "compra_agil": "Compras Ágiles",
+    }.get(profile.opportunity_type, "Licitaciones y Compras Ágiles")
+    message["Subject"] = f"{profile_type} — {profile.name} — {len(rows)} coincidencias"
     message["From"], message["To"] = SMTP_FROM, profile.recipient_email
     message.set_content("\n".join(lines))
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
