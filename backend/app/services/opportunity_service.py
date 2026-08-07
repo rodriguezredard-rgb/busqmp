@@ -185,7 +185,16 @@ def backfill_agile_closing_dates() -> int:
     initialize_database()
     db = SessionLocal()
     try:
-        rows = db.query(CompraAgil).all()
+        now = datetime.now(timezone.utc)
+        effective_closing = func.coalesce(
+            CompraAgil.fecha_segundo_cierre,
+            CompraAgil.fecha_primer_cierre,
+            CompraAgil.fecha_cierre,
+        )
+        rows = db.query(CompraAgil).filter(
+            ~func.lower(CompraAgil.estado).like("%cerrad%"),
+            effective_closing > now,
+        ).limit(1000).all()
         updated = 0
         for row in rows:
             primer_cierre, segundo_cierre, cierre = _agile_closing_dates(row.source_detail or {})
