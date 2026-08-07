@@ -92,7 +92,19 @@ def _agile_closing_dates(data: dict):
 
 def _agile_search_text(data: dict, code: str, name: str, description: str, organization: str) -> str:
     product_parts = []
-    for product in data.get("productos_solicitados") or []:
+    products = data.get("productos_solicitados") or []
+    if isinstance(products, dict):
+        products = (
+            products.get("items")
+            or products.get("listado")
+            or products.get("productos")
+            or list(products.values())
+        )
+    if not isinstance(products, list):
+        products = []
+    for product in products:
+        if not isinstance(product, dict):
+            continue
         product_parts.extend([
             str(product.get("codigo_producto") or ""),
             str(product.get("nombre") or ""),

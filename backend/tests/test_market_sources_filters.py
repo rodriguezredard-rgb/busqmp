@@ -73,3 +73,13 @@ def test_compra_agil_search_text_includes_requested_products():
     assert "alimento para perros" in text
     assert "uso veterinario" in text
     assert "10131508" in text
+
+
+def test_compra_agil_search_text_accepts_product_container():
+    text = _agile_search_text({
+        "productos_solicitados": {
+            "items": [{"nombre": "Vacuna antirrábica"}],
+        },
+    }, "123-COT26", "Compra", "", "Municipalidad")
+
+    assert "vacuna antirrábica" in text
