@@ -74,6 +74,7 @@ def profile_diagnostics(recipient: str, authorization: str | None = Header(defau
     """Resume configuración y resultados sin exponer correo ni palabras clave."""
     _authorize(authorization)
     initialize_database()
+    backfill_agile_closing_dates()
     db = SessionLocal()
     try:
         profiles = db.query(SearchProfile).filter(

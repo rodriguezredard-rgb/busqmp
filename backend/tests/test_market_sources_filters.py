@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.market_sources import MarketSourcesService
-from app.services.opportunity_service import _compra_agil_record
+from app.services.opportunity_service import _agile_search_text, _compra_agil_record
 
 
 def test_build_params_includes_mercado_publico_filters():
@@ -59,3 +59,17 @@ def test_compra_agil_reads_first_and_second_closing_dates():
     assert code == "123-1-COT26"
     assert values["fecha_primer_cierre"].day == 7
     assert values["fecha_segundo_cierre"].day == 10
+
+
+def test_compra_agil_search_text_includes_requested_products():
+    text = _agile_search_text({
+        "productos_solicitados": [{
+            "codigo_producto": "10131508",
+            "nombre": "Alimento para perros",
+            "descripcion": "Uso veterinario",
+        }],
+    }, "123-COT26", "Compra de insumos", "", "Municipalidad")
+
+    assert "alimento para perros" in text
+    assert "uso veterinario" in text
+    assert "10131508" in text

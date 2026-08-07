@@ -90,6 +90,17 @@ def _agile_closing_dates(data: dict):
     return primer_cierre or cierre, segundo_cierre, cierre
 
 
+def _agile_search_text(data: dict, code: str, name: str, description: str, organization: str) -> str:
+    product_parts = []
+    for product in data.get("productos_solicitados") or []:
+        product_parts.extend([
+            str(product.get("codigo_producto") or ""),
+            str(product.get("nombre") or ""),
+            str(product.get("descripcion") or ""),
+        ])
+    return " ".join([code, name, description, organization, *product_parts]).lower()
+
+
 def _compra_agil_record(data: dict):
     codigo = str(data.get("codigo") or "").strip()
     if not codigo:
@@ -101,10 +112,11 @@ def _compra_agil_record(data: dict):
     institucion = data.get("institucion") or {}
     descripcion = str(data.get("descripcion") or "")
     nombre = str(data.get("nombre") or "")
+    organismo = str(institucion.get("organismo_comprador") or "")
     values = {
         "nombre": nombre, "descripcion": descripcion,
         "estado": str(estado.get("codigo") or estado.get("glosa") or ""),
-        "organismo": str(institucion.get("organismo_comprador") or ""),
+        "organismo": organismo,
         "rut_organismo": str(institucion.get("rut") or ""),
         "unidad_compra": str(institucion.get("unidad_compra") or ""),
         "region_codigo": institucion.get("region"), "region": str(institucion.get("nombre_region") or ""),
@@ -115,7 +127,7 @@ def _compra_agil_record(data: dict):
         "fecha_primer_cierre": primer_cierre or cierre,
         "fecha_segundo_cierre": segundo_cierre,
         "fecha_ultimo_cambio": _datetime(fechas.get("fecha_ultimo_cambio")),
-        "search_text": " ".join([codigo, nombre, descripcion, str(institucion.get("organismo_comprador") or "")]).lower(),
+        "search_text": _agile_search_text(data, codigo, nombre, descripcion, organismo),
         "source_detail": data, "updated_at": datetime.now(timezone.utc),
     }
     return codigo, values
@@ -151,19 +163,31 @@ def save_compra_agil(data: dict) -> None:
 
 
 def backfill_agile_closing_dates() -> int:
-    """Completa las nuevas columnas desde el JSON ya almacenado."""
+    """Completa fechas e índice de productos desde el JSON ya almacenado."""
     initialize_database()
     db = SessionLocal()
     try:
-        rows = db.query(CompraAgil).filter(CompraAgil.fecha_primer_cierre.is_(None)).all()
+        rows = db.query(CompraAgil).all()
         updated = 0
         for row in rows:
             primer_cierre, segundo_cierre, cierre = _agile_closing_dates(row.source_detail or {})
-            row.fecha_primer_cierre = primer_cierre or row.fecha_cierre
-            row.fecha_segundo_cierre = segundo_cierre
+            search_text = _agile_search_text(
+                row.source_detail or {}, row.codigo, row.nombre, row.descripcion, row.organismo,
+            )
+            changed = False
+            if row.fecha_primer_cierre is None:
+                row.fecha_primer_cierre = primer_cierre or row.fecha_cierre
+                changed = True
+            if row.fecha_segundo_cierre is None and segundo_cierre is not None:
+                row.fecha_segundo_cierre = segundo_cierre
+                changed = True
             if cierre and not row.fecha_cierre:
                 row.fecha_cierre = cierre
-            updated += 1
+                changed = True
+            if row.search_text != search_text:
+                row.search_text = search_text
+                changed = True
+            updated += int(changed)
         db.commit()
         return updated
     except Exception:
@@ -216,6 +240,10 @@ def save_opportunity_categories(code: str, detail: dict, source: str) -> int:
             row.search_text = " ".join([
                 row.codigo, row.nombre, row.descripcion, row.organismo,
             ]).lower()
+        else:
+            row.search_text = _agile_search_text(
+                detail, row.codigo, row.nombre, row.descripcion, row.organismo,
+            )
         now = datetime.now(timezone.utc)
         for category_code, category_name in pairs:
             category = db.get(OpportunityCategory, category_code)
