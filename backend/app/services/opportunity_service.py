@@ -73,7 +73,11 @@ def _agile_dict(row):
 
 
 def _agile_closing_dates(data: dict):
+    if not isinstance(data, dict):
+        return None, None, None
     fechas = data.get("fechas") or {}
+    if not isinstance(fechas, dict):
+        fechas = {}
     primer_cierre = _datetime(
         fechas.get("fecha_primer_cierre")
         or fechas.get("fecha_cierre_primer_llamado")
@@ -92,6 +96,8 @@ def _agile_closing_dates(data: dict):
 
 def _agile_search_text(data: dict, code: str, name: str, description: str, organization: str) -> str:
     product_parts = []
+    if not isinstance(data, dict):
+        data = {}
     products = data.get("productos_solicitados") or []
     if isinstance(products, dict):
         products = (
