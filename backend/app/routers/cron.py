@@ -1,4 +1,5 @@
 import json
+from types import SimpleNamespace
 from fastapi import APIRouter, Header, HTTPException, Query
 from app.core.config import API_TICKET, CRON_SECRET
 from app.models.database import SessionLocal, initialize_database
@@ -7,7 +8,7 @@ from app.services.digest_service import matching_opportunities, run_due_digests,
 from app.services.market_sources import MarketSourcesService
 from app.services.opportunity_service import (
     backfill_agile_closing_dates, list_unenriched_codes, save_compras_agiles,
-    save_opportunity_categories, sync_active_licitaciones,
+    save_opportunity_categories, sync_active_licitaciones, count_opportunities,
 )
 
 router = APIRouter(prefix="/cron", tags=["cron"])
@@ -78,7 +79,15 @@ def profile_diagnostics(recipient: str, authorization: str | None = Header(defau
         profiles = db.query(SearchProfile).filter(
             SearchProfile.recipient_email.ilike(recipient.strip()),
         ).order_by(SearchProfile.id).all()
-        return {"profiles": [{
+        summaries = []
+        for profile in profiles:
+            relaxed = SimpleNamespace(
+                include_keywords="[]", exclude_keywords="[]", selected_categories="[]",
+                opportunity_type="compra_agil", region=profile.region,
+                organization=profile.organization, status=profile.status,
+                minimum_amount=profile.minimum_amount, maximum_amount=profile.maximum_amount,
+            )
+            summaries.append({
             "id": profile.id,
             "name": profile.name,
             "enabled": profile.enabled,
@@ -97,7 +106,17 @@ def profile_diagnostics(recipient: str, authorization: str | None = Header(defau
             "compra_agil_matches": len(matching_opportunities(
                 profile, limit=None, opportunity_type="compra_agil",
             )),
-        } for profile in profiles]}
+            "compra_agil_matches_without_keyword_or_category": len(matching_opportunities(
+                relaxed, limit=None, opportunity_type="compra_agil",
+            )),
+        })
+        return {
+            "inventory": {
+                "licitaciones": count_opportunities(opportunity_type="licitacion"),
+                "compras_agiles": count_opportunities(opportunity_type="compra_agil"),
+            },
+            "profiles": summaries,
+        }
     finally:
         db.close()
 
