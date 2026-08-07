@@ -1,17 +1,21 @@
 name: Carga inicial Compras Agiles
 
 on:
+  schedule:
+    # Reconciliación diaria para recuperar publicaciones perdidas por retrasos
+    # o cancelaciones del sincronizador incremental.
+    - cron: "29 8 * * *"
   workflow_dispatch:
     inputs:
       published_from:
         description: "Inicio ISO-8601 (ej. 2026-07-01T00:00:00Z)"
-        required: true
+        required: false
       published_to:
         description: "Fin ISO-8601 (ej. 2026-07-31T23:59:59Z)"
-        required: true
+        required: false
       start_page:
         description: "Pagina inicial (usa 1 para una carga nueva)"
-        required: true
+        required: false
         default: "1"
 
 permissions:
@@ -32,6 +36,16 @@ jobs:
         run: |
           test -n "$BACKEND_URL"
           test -n "$CRON_SECRET"
+          if [ -z "$PUBLISHED_FROM" ]; then
+            PUBLISHED_FROM=$(date -u -d '7 days ago' '+%Y-%m-%dT00:00:00Z')
+          fi
+          if [ -z "$PUBLISHED_TO" ]; then
+            PUBLISHED_TO=$(date -u '+%Y-%m-%dT23:59:59Z')
+          fi
+          if [ -z "$START_PAGE" ]; then
+            START_PAGE=1
+          fi
+          echo "Reconciliando publicaciones entre $PUBLISHED_FROM y $PUBLISHED_TO"
           page="$START_PAGE"
           saved_total=0
           while true; do
