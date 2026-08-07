@@ -2,7 +2,13 @@ import json
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from app.services.digest_service import matching_opportunities, send_digest
+from app.services.digest_service import matches_text_pattern, matching_opportunities, send_digest
+
+
+def test_wildcard_matches_a_word_prefix_only():
+    assert matches_text_pattern("vet*", "servicio veterinario")
+    assert matches_text_pattern("vet*", "clínica VET para mascotas")
+    assert not matches_text_pattern("vet*", "servicio de inventario")
 
 
 def test_profile_matches_reuses_keywords_categories_and_exclusions():
@@ -12,9 +18,9 @@ def test_profile_matches_reuses_keywords_categories_and_exclusions():
         organization="", status="", minimum_amount=None, maximum_amount=None,
     )
     rows = [
-        {"id": "1", "title": "Servicio veterinario", "description": "Clínica", "category_codes": ["5012"], "publish_date": "2026-08-01"},
-        {"id": "2", "title": "Servicio veterinario", "description": "Incluye vehículo", "category_codes": ["5012"], "publish_date": "2026-08-01"},
-        {"id": "3", "title": "Servicio veterinario", "description": "Clínica", "category_codes": ["6012"], "publish_date": "2026-08-01"},
+        {"id": "1", "title": "Servicio veterinario", "description": "Clínica", "_search_text": "servicio veterinario clínica", "category_codes": ["5012"], "publish_date": "2026-08-01"},
+        {"id": "2", "title": "Servicio veterinario", "description": "Incluye vehículo", "_search_text": "servicio veterinario incluye vehículo", "category_codes": ["5012"], "publish_date": "2026-08-01"},
+        {"id": "3", "title": "Servicio veterinario", "description": "Clínica", "_search_text": "servicio veterinario clínica", "category_codes": ["6012"], "publish_date": "2026-08-01"},
     ]
     with patch("app.services.digest_service.list_opportunities", return_value=rows) as listing:
         matches = matching_opportunities(profile, limit=None, opportunity_type="licitacion")
@@ -29,9 +35,9 @@ def test_profile_matches_sorts_amounts_and_leaves_unknown_amounts_last():
         minimum_amount=None, maximum_amount=None,
     )
     rows = [
-        {"id": "unknown", "title": "Sin monto", "description": "", "category_codes": [], "amount": None},
-        {"id": "small", "title": "Monto menor", "description": "", "category_codes": [], "amount": 10},
-        {"id": "large", "title": "Monto mayor", "description": "", "category_codes": [], "amount": 100},
+        {"id": "unknown", "title": "Sin monto", "description": "", "_search_text": "sin monto", "category_codes": [], "amount": None},
+        {"id": "small", "title": "Monto menor", "description": "", "_search_text": "monto menor", "category_codes": [], "amount": 10},
+        {"id": "large", "title": "Monto mayor", "description": "", "_search_text": "monto mayor", "category_codes": [], "amount": 100},
     ]
     with patch("app.services.digest_service.list_opportunities", return_value=rows):
         matches = matching_opportunities(profile, limit=None, sort="amount_desc")

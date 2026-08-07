@@ -64,7 +64,9 @@ def matching_opportunities(profile: SearchProfile, limit: int | None = 100, offs
         )
 
     matches = [row for row in unique.values()
-               if matches_category(row)
+               if any(matches_text_pattern(word, row.get("_search_text") or "")
+                      for word in included)
+               and matches_category(row)
                and not any(matches_text_pattern(word, f"{row['title']} {row.get('description', '')}")
                            for word in excluded)]
     if sort in ("amount_desc", "amount_asc"):
@@ -74,7 +76,10 @@ def matching_opportunities(profile: SearchProfile, limit: int | None = 100, offs
         matches = available + unavailable
     else:
         matches.sort(key=lambda item: str(item.get("publish_date") or item.get("closing_date") or ""), reverse=sort != "oldest")
-    return matches[offset:] if limit is None else matches[offset:offset + limit]
+    selected = matches[offset:] if limit is None else matches[offset:offset + limit]
+    for row in selected:
+        row.pop("_search_text", None)
+    return selected
 
 
 def send_digest(profile: SearchProfile, rows: list[dict]):

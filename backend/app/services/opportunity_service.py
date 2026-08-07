@@ -52,6 +52,7 @@ def _licitacion_dict(row):
         "currency": str(detail.get("Moneda") or "CLP"), "publish_date": publish_date,
         "award_date": None, "closing_date": closing_date,
         "status": row.estado, "region": region,
+        "_search_text": row.search_text,
         "url": f"https://www.mercadopublico.cl/Procurement/Modules/RFB/DetailsAcquisition.aspx?idlicitacion={row.codigo}",
     }
 
@@ -68,6 +69,7 @@ def _agile_dict(row):
         "first_closing_date": row.fecha_primer_cierre or row.fecha_cierre,
         "second_closing_date": row.fecha_segundo_cierre,
         "status": row.estado, "region": row.region,
+        "_search_text": row.search_text,
         "url": f"https://buscador.mercadopublico.cl/ficha?code={row.codigo}",
     }
 
