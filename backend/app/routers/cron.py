@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Header, HTTPException, Query
 from app.core.config import API_TICKET, CRON_SECRET
 from app.models.database import SessionLocal, initialize_database
-from app.services.digest_service import run_due_digests
+from app.models.search_profile import SearchProfile
+from app.services.digest_service import matching_opportunities, run_due_digests, send_digest
 from app.services.market_sources import MarketSourcesService
 from app.services.opportunity_service import (
     backfill_agile_closing_dates, list_unenriched_codes, save_compras_agiles,
@@ -11,10 +12,14 @@ from app.services.opportunity_service import (
 router = APIRouter(prefix="/cron", tags=["cron"])
 
 
-@router.post("/daily-digests")
-def daily_digests(authorization: str | None = Header(default=None)):
+def _authorize(authorization: str | None):
     if not CRON_SECRET or authorization != f"Bearer {CRON_SECRET}":
         raise HTTPException(401, "No autorizado")
+
+
+@router.post("/daily-digests")
+def daily_digests(authorization: str | None = Header(default=None)):
+    _authorize(authorization)
     initialize_database()
     backfill_agile_closing_dates()
     synchronized = {"licitaciones_activas": 0, "compras_agiles": 0}
@@ -35,6 +40,29 @@ def daily_digests(authorization: str | None = Header(default=None)):
         if failed:
             raise HTTPException(502, detail=response)
         return response
+    finally:
+        db.close()
+
+
+@router.post("/test-digest")
+def test_digest(recipient: str, authorization: str | None = Header(default=None)):
+    """Envía una prueba inmediata sin consumir el envío diario del perfil."""
+    _authorize(authorization)
+    initialize_database()
+    db = SessionLocal()
+    try:
+        profiles = db.query(SearchProfile).filter(
+            SearchProfile.enabled.is_(True),
+            SearchProfile.recipient_email.ilike(recipient.strip()),
+        ).all()
+        if not profiles:
+            raise HTTPException(404, "No hay perfiles habilitados para el destinatario")
+        results = []
+        for profile in profiles:
+            rows = matching_opportunities(profile)
+            send_digest(profile, rows)
+            results.append({"profile_id": profile.id, "status": "sent", "count": len(rows)})
+        return {"results": results}
     finally:
         db.close()
 

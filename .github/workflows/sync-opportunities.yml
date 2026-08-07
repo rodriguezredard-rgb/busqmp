@@ -2,6 +2,11 @@ name: Sincronizar oportunidades
 
 on:
   workflow_dispatch:
+    inputs:
+      test_recipient:
+        description: "Correo para una prueba inmediata (vacío = ejecución normal)"
+        required: false
+        type: string
   schedule:
     # GitHub advierte que la cola se satura cerca del inicio de cada hora.
     - cron: "17,47 * * * *"
@@ -15,6 +20,7 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Actualizar licitaciones y compras ágiles
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.test_recipient == '' }}
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -25,4 +31,20 @@ jobs:
             --connect-timeout 15 --max-time 55 \
             --retry 4 --retry-delay 5 --retry-max-time 210 --retry-all-errors \
             -X POST "$BACKEND_URL/cron/daily-digests" \
+            -H "Authorization: Bearer $CRON_SECRET"
+      - name: Enviar resumen de prueba
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_recipient != '' }}
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TEST_RECIPIENT: ${{ inputs.test_recipient }}
+        run: |
+          test -n "$BACKEND_URL"
+          test -n "$CRON_SECRET"
+          echo "::add-mask::$TEST_RECIPIENT"
+          curl --fail-with-body --location --show-error \
+            --connect-timeout 15 --max-time 55 \
+            --retry 2 --retry-delay 5 --retry-all-errors \
+            -X POST --get --data-urlencode "recipient=$TEST_RECIPIENT" \
+            "$BACKEND_URL/cron/test-digest" \
             -H "Authorization: Bearer $CRON_SECRET"
