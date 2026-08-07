@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, Header, HTTPException, Query
 from app.core.config import API_TICKET, CRON_SECRET
 from app.models.database import SessionLocal, initialize_database
@@ -63,6 +64,62 @@ def test_digest(recipient: str, authorization: str | None = Header(default=None)
             send_digest(profile, rows)
             results.append({"profile_id": profile.id, "status": "sent", "count": len(rows)})
         return {"results": results}
+    finally:
+        db.close()
+
+
+@router.get("/profile-diagnostics")
+def profile_diagnostics(recipient: str, authorization: str | None = Header(default=None)):
+    """Resume configuración y resultados sin exponer correo ni palabras clave."""
+    _authorize(authorization)
+    initialize_database()
+    db = SessionLocal()
+    try:
+        profiles = db.query(SearchProfile).filter(
+            SearchProfile.recipient_email.ilike(recipient.strip()),
+        ).order_by(SearchProfile.id).all()
+        return {"profiles": [{
+            "id": profile.id,
+            "name": profile.name,
+            "enabled": profile.enabled,
+            "opportunity_type": profile.opportunity_type,
+            "include_keyword_count": len(json.loads(profile.include_keywords or "[]")),
+            "exclude_keyword_count": len(json.loads(profile.exclude_keywords or "[]")),
+            "category_count": len(json.loads(profile.selected_categories or "[]")),
+            "has_region_filter": bool(profile.region),
+            "has_organization_filter": bool(profile.organization),
+            "has_status_filter": bool(profile.status),
+            "has_amount_filter": profile.minimum_amount is not None or profile.maximum_amount is not None,
+            "matches": len(matching_opportunities(profile, limit=None)),
+            "licitacion_matches": len(matching_opportunities(
+                profile, limit=None, opportunity_type="licitacion",
+            )),
+            "compra_agil_matches": len(matching_opportunities(
+                profile, limit=None, opportunity_type="compra_agil",
+            )),
+        } for profile in profiles]}
+    finally:
+        db.close()
+
+
+@router.post("/disable-profile")
+def disable_profile(
+    recipient: str, profile_name: str,
+    authorization: str | None = Header(default=None),
+):
+    _authorize(authorization)
+    initialize_database()
+    db = SessionLocal()
+    try:
+        profiles = db.query(SearchProfile).filter(
+            SearchProfile.recipient_email.ilike(recipient.strip()),
+            SearchProfile.name.ilike(profile_name.strip()),
+        ).all()
+        if len(profiles) != 1:
+            raise HTTPException(409, f"Se encontraron {len(profiles)} perfiles coincidentes")
+        profiles[0].enabled = False
+        db.commit()
+        return {"profile_id": profiles[0].id, "name": profiles[0].name, "enabled": False}
     finally:
         db.close()
 

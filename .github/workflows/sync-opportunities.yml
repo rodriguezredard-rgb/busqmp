@@ -7,6 +7,14 @@ on:
         description: "Correo para una prueba inmediata (vacío = ejecución normal)"
         required: false
         type: string
+      profile_action:
+        description: "Acción administrativa: diagnose o disable"
+        required: false
+        type: string
+      profile_name:
+        description: "Nombre exacto del perfil para disable"
+        required: false
+        type: string
   schedule:
     # GitHub advierte que la cola se satura cerca del inicio de cada hora.
     - cron: "17,47 * * * *"
@@ -20,7 +28,7 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Actualizar licitaciones y compras ágiles
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.test_recipient == '' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || (inputs.test_recipient == '' && inputs.profile_action == '') }}
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -33,7 +41,7 @@ jobs:
             -X POST "$BACKEND_URL/cron/daily-digests" \
             -H "Authorization: Bearer $CRON_SECRET"
       - name: Enviar resumen de prueba
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_recipient != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_recipient != '' && inputs.profile_action == '' }}
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -47,4 +55,33 @@ jobs:
             --retry 2 --retry-delay 5 --retry-all-errors \
             -X POST --get --data-urlencode "recipient=$TEST_RECIPIENT" \
             "$BACKEND_URL/cron/test-digest" \
+            -H "Authorization: Bearer $CRON_SECRET"
+      - name: Diagnosticar perfiles
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.profile_action == 'diagnose' }}
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TEST_RECIPIENT: ${{ inputs.test_recipient }}
+        run: |
+          echo "::add-mask::$TEST_RECIPIENT"
+          curl --fail-with-body --location --show-error \
+            --connect-timeout 15 --max-time 55 \
+            --get --data-urlencode "recipient=$TEST_RECIPIENT" \
+            "$BACKEND_URL/cron/profile-diagnostics" \
+            -H "Authorization: Bearer $CRON_SECRET"
+      - name: Deshabilitar perfil
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.profile_action == 'disable' }}
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TEST_RECIPIENT: ${{ inputs.test_recipient }}
+          PROFILE_NAME: ${{ inputs.profile_name }}
+        run: |
+          echo "::add-mask::$TEST_RECIPIENT"
+          curl --fail-with-body --location --show-error \
+            --connect-timeout 15 --max-time 55 \
+            -X POST --get \
+            --data-urlencode "recipient=$TEST_RECIPIENT" \
+            --data-urlencode "profile_name=$PROFILE_NAME" \
+            "$BACKEND_URL/cron/disable-profile" \
             -H "Authorization: Bearer $CRON_SECRET"
