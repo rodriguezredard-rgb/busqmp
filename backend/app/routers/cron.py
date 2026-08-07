@@ -82,12 +82,30 @@ def profile_diagnostics(recipient: str, authorization: str | None = Header(defau
         ).order_by(SearchProfile.id).all()
         summaries = []
         for profile in profiles:
+            included_keywords = json.loads(profile.include_keywords or "[]")
             relaxed = SimpleNamespace(
                 include_keywords="[]", exclude_keywords="[]", selected_categories="[]",
                 opportunity_type="compra_agil", region=profile.region,
                 organization=profile.organization, status=profile.status,
                 minimum_amount=profile.minimum_amount, maximum_amount=profile.maximum_amount,
             )
+            keyword_diagnostics = []
+            for index, keyword in enumerate(included_keywords, start=1):
+                single_keyword = SimpleNamespace(
+                    include_keywords=json.dumps([keyword]), exclude_keywords="[]",
+                    selected_categories="[]", opportunity_type="compra_agil",
+                    region=profile.region, organization=profile.organization,
+                    status=profile.status, minimum_amount=profile.minimum_amount,
+                    maximum_amount=profile.maximum_amount,
+                )
+                keyword_diagnostics.append({
+                    "index": index,
+                    "uses_wildcard": "*" in keyword,
+                    "is_prefix_wildcard": keyword.endswith("*") and keyword.count("*") == 1,
+                    "matches": len(matching_opportunities(
+                        single_keyword, limit=None, opportunity_type="compra_agil",
+                    )),
+                })
             summaries.append({
             "id": profile.id,
             "name": profile.name,
@@ -110,6 +128,7 @@ def profile_diagnostics(recipient: str, authorization: str | None = Header(defau
             "compra_agil_matches_without_keyword_or_category": len(matching_opportunities(
                 relaxed, limit=None, opportunity_type="compra_agil",
             )),
+            "keyword_diagnostics": keyword_diagnostics,
         })
         return {
             "inventory": {
