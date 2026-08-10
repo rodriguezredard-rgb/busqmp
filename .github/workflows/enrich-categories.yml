@@ -1,8 +1,7 @@
 name: Enriquecer rubros
 
 on:
-  schedule:
-    - cron: "23 7 * * *"
+  # Sin enriquecimiento automático. Se conserva solo para ejecución manual.
   workflow_dispatch:
     inputs:
       source:
