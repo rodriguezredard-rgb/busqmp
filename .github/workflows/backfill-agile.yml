@@ -1,10 +1,8 @@
 name: Carga inicial Compras Agiles
 
 on:
-  schedule:
-    # Reconciliación diaria para recuperar publicaciones perdidas por retrasos
-    # o cancelaciones del sincronizador incremental.
-    - cron: "29 8 * * *"
+  # La recarga histórica queda disponible solo para recuperaciones manuales.
+  # La sincronización diaria normal ya usa una ventana solapada de 25 horas.
   workflow_dispatch:
     inputs:
       published_from:

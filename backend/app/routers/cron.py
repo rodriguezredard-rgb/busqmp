@@ -29,10 +29,9 @@ def daily_digests(authorization: str | None = Header(default=None)):
         service = MarketSourcesService(API_TICKET)
         active_items = service.fetch_active_licitaciones()
         synchronized["licitaciones_activas"] = sync_active_licitaciones(active_items)
-        # El workflow corre cada 30 minutos; una ventana de 60 minutos evita
-        # perder cambios si GitHub o Mercado Público se retrasan. El upsert
-        # hace que el solapamiento sea seguro.
-        agile_items = service.fetch_compra_agil(minutes=60)
+        # El workflow corre una vez al día. La ventana de 25 horas deja una
+        # hora de solapamiento para absorber retrasos; el upsert la hace segura.
+        agile_items = service.fetch_compra_agil(minutes=1500)
         synchronized["compras_agiles"] = save_compras_agiles(agile_items)
     db = SessionLocal()
     try:
