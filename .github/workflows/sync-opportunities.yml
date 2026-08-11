@@ -25,9 +25,8 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    # La sincronizacion se divide en llamadas cortas para respetar el limite
-    # serverless, pero el recorrido completo puede necesitar varias paginas.
-    timeout-minutes: 15
+    # Cada pagina usa una llamada corta y se procesan hasta cinco en paralelo.
+    timeout-minutes: 20
     steps:
       - name: Actualizar licitaciones y compras ágiles
         if: ${{ github.event_name != 'workflow_dispatch' || (inputs.test_recipient == '' && inputs.profile_action == '') }}
@@ -47,16 +46,39 @@ jobs:
           echo "Sincronizando licitaciones activas..."
           request "$BACKEND_URL/cron/sync-licitaciones"
 
-          page=1
-          while true; do
-            echo "Sincronizando pagina $page de Compras Agiles..."
-            response=$(request "$BACKEND_URL/cron/sync-agile-page?minutes=1500&page=$page&page_size=50")
-            echo "$response"
-            total_pages=$(echo "$response" | jq -er '.total_pages')
-            if [ "$total_pages" -eq 0 ] || [ "$page" -ge "$total_pages" ]; then
-              break
+          echo "Sincronizando pagina 1 de Compras Agiles..."
+          response=$(request "$BACKEND_URL/cron/sync-agile-page?minutes=1500&page=1&page_size=50")
+          echo "$response"
+          total_pages=$(echo "$response" | jq -er '.total_pages')
+
+          batch_size=5
+          for ((batch_start=2; batch_start<=total_pages; batch_start+=batch_size)); do
+            batch_end=$((batch_start + batch_size - 1))
+            if [ "$batch_end" -gt "$total_pages" ]; then
+              batch_end=$total_pages
             fi
-            page=$((page + 1))
+
+            pids=()
+            output_files=()
+            for ((page=batch_start; page<=batch_end; page++)); do
+              echo "Sincronizando pagina $page de $total_pages de Compras Agiles..."
+              output_file="$RUNNER_TEMP/compra-agil-$page.json"
+              request "$BACKEND_URL/cron/sync-agile-page?minutes=1500&page=$page&page_size=50" \
+                > "$output_file" &
+              pids+=("$!")
+              output_files+=("$output_file")
+            done
+
+            batch_failed=0
+            for index in "${!pids[@]}"; do
+              if wait "${pids[$index]}"; then
+                cat "${output_files[$index]}"
+              else
+                cat "${output_files[$index]}" >&2
+                batch_failed=1
+              fi
+            done
+            test "$batch_failed" -eq 0
           done
 
           echo "Enviando resumenes pendientes..."
