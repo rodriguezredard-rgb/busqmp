@@ -25,7 +25,9 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    # La sincronizacion se divide en llamadas cortas para respetar el limite
+    # serverless, pero el recorrido completo puede necesitar varias paginas.
+    timeout-minutes: 15
     steps:
       - name: Actualizar licitaciones y compras ágiles
         if: ${{ github.event_name != 'workflow_dispatch' || (inputs.test_recipient == '' && inputs.profile_action == '') }}
@@ -35,11 +37,30 @@ jobs:
         run: |
           test -n "$BACKEND_URL"
           test -n "$CRON_SECRET"
-          curl --fail-with-body --location --show-error \
-            --connect-timeout 15 --max-time 55 \
-            --retry 4 --retry-delay 5 --retry-max-time 210 --retry-all-errors \
-            -X POST "$BACKEND_URL/cron/daily-digests" \
-            -H "Authorization: Bearer $CRON_SECRET"
+          request() {
+            curl --silent --show-error --fail-with-body --location \
+              --connect-timeout 10 --max-time 50 \
+              --retry 1 --retry-delay 3 --retry-max-time 95 --retry-all-errors \
+              -X POST "$1" -H "Authorization: Bearer $CRON_SECRET"
+          }
+
+          echo "Sincronizando licitaciones activas..."
+          request "$BACKEND_URL/cron/sync-licitaciones"
+
+          page=1
+          while true; do
+            echo "Sincronizando pagina $page de Compras Agiles..."
+            response=$(request "$BACKEND_URL/cron/sync-agile-page?minutes=1500&page=$page&page_size=50")
+            echo "$response"
+            total_pages=$(echo "$response" | jq -er '.total_pages')
+            if [ "$total_pages" -eq 0 ] || [ "$page" -ge "$total_pages" ]; then
+              break
+            fi
+            page=$((page + 1))
+          done
+
+          echo "Enviando resumenes pendientes..."
+          request "$BACKEND_URL/cron/send-due-digests"
       - name: Enviar resumen de prueba
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_recipient != '' && inputs.profile_action == '' }}
         env:

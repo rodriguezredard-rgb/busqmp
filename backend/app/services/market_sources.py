@@ -67,7 +67,7 @@ class MarketSourcesService:
         if not self.ticket:
             return []
         url = "https://api.mercadopublico.cl/servicios/v1/publico/licitaciones.json"
-        response = requests.get(url, params={"ticket": self.ticket, "estado": "activas"}, timeout=60)
+        response = requests.get(url, params={"ticket": self.ticket, "estado": "activas"}, timeout=40)
         response.raise_for_status()
         payload = response.json() if response.content else {}
         return payload.get("Listado", []) if isinstance(payload, dict) else []
@@ -113,6 +113,29 @@ class MarketSourcesService:
             if page >= int(pagination.get("total_paginas") or 1):
                 return results
             page += 1
+
+    def fetch_compra_agil_changes_page(self, *, minutes: int = 1500, page: int = 1,
+                                       page_size: int = 50) -> tuple[list[dict], dict]:
+        """Obtiene una pagina de cambios para mantener corta cada funcion serverless."""
+        if not self.ticket:
+            return [], {"numero_pagina": page, "total_paginas": 0, "total_resultados": 0}
+        response = requests.get(
+            "https://api2.mercadopublico.cl/v2/compra-agil",
+            headers={"ticket": self.ticket},
+            params={
+                "ttl_cambio_ms": minutes * 60_000,
+                "tamano_pagina": min(page_size, 50),
+                "numero_pagina": page,
+                "ordenar_por": "FechaUltimaModificacion",
+            },
+            timeout=40,
+        )
+        response.raise_for_status()
+        data = response.json() or {}
+        if data.get("success") != "OK":
+            raise RuntimeError(str(data.get("errors") or "Respuesta invalida de Compra Agil"))
+        payload = data.get("payload") or {}
+        return payload.get("items") or [], payload.get("paginacion") or {}
 
     def fetch_compra_agil_page(self, *, page: int = 1, page_size: int = 50,
                                 published_from: str | None = None,

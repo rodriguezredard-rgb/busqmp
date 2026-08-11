@@ -1,10 +1,27 @@
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.market_sources import MarketSourcesService
 from app.services.opportunity_service import _agile_search_text, _compra_agil_record
+
+
+def test_compra_agil_changes_page_requests_only_one_page():
+    response = MagicMock()
+    response.json.return_value = {
+        "success": "OK",
+        "payload": {"items": [{"codigo": "1-COT26"}], "paginacion": {"total_paginas": 3}},
+    }
+    with patch("app.services.market_sources.requests.get", return_value=response) as get:
+        items, pagination = MarketSourcesService("ticket").fetch_compra_agil_changes_page(
+            minutes=1500, page=2, page_size=50,
+        )
+    assert items == [{"codigo": "1-COT26"}]
+    assert pagination["total_paginas"] == 3
+    assert get.call_args.kwargs["params"]["numero_pagina"] == 2
+    assert get.call_args.kwargs["params"]["ttl_cambio_ms"] == 90_000_000
 
 
 def test_build_params_includes_mercado_publico_filters():

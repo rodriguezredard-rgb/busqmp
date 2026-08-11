@@ -21,6 +21,7 @@ def _authorize(authorization: str | None):
 
 @router.post("/daily-digests")
 def daily_digests(authorization: str | None = Header(default=None)):
+    """Compatibilidad: el workflow nuevo usa los endpoints por lote."""
     _authorize(authorization)
     initialize_database()
     backfill_agile_closing_dates()
@@ -37,6 +38,53 @@ def daily_digests(authorization: str | None = Header(default=None)):
     try:
         results = run_due_digests(db)
         response = {"synchronized": synchronized, "results": results}
+        failed = [item for item in results if item.get("status") in {"error", "invalid_timezone"}]
+        if failed:
+            raise HTTPException(502, detail=response)
+        return response
+    finally:
+        db.close()
+
+
+@router.post("/sync-licitaciones")
+def sync_licitaciones(authorization: str | None = Header(default=None)):
+    _authorize(authorization)
+    if not API_TICKET:
+        raise HTTPException(503, "MERCADO_PUBLICO_TICKET no esta configurado")
+    items = MarketSourcesService(API_TICKET).fetch_active_licitaciones()
+    return {"saved": sync_active_licitaciones(items)}
+
+
+@router.post("/sync-agile-page")
+def sync_agile_page(
+    page: int = Query(1, ge=1),
+    minutes: int = Query(1500, ge=60, le=2880),
+    page_size: int = Query(50, ge=1, le=50),
+    authorization: str | None = Header(default=None),
+):
+    _authorize(authorization)
+    if not API_TICKET:
+        raise HTTPException(503, "MERCADO_PUBLICO_TICKET no esta configurado")
+    items, pagination = MarketSourcesService(API_TICKET).fetch_compra_agil_changes_page(
+        minutes=minutes, page=page, page_size=page_size,
+    )
+    return {
+        "saved": save_compras_agiles(items),
+        "page": int(pagination.get("numero_pagina") or page),
+        "total_pages": int(pagination.get("total_paginas") or 0),
+        "total_results": int(pagination.get("total_resultados") or 0),
+    }
+
+
+@router.post("/send-due-digests")
+def send_due_digest_emails(authorization: str | None = Header(default=None)):
+    _authorize(authorization)
+    initialize_database()
+    backfill_agile_closing_dates()
+    db = SessionLocal()
+    try:
+        results = run_due_digests(db)
+        response = {"results": results}
         failed = [item for item in results if item.get("status") in {"error", "invalid_timezone"}]
         if failed:
             raise HTTPException(502, detail=response)
